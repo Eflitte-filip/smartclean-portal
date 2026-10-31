@@ -510,7 +510,7 @@ html[data-view="grid"] .lcell .a-row .a-sel{left:auto;right:14px;top:12px;margin
 .a-det-pad{padding:6px 0 18px;opacity:0;}
 .a-det.show .a-det-pad{opacity:1;animation:adReveal .42s ease .08s backwards;}   /* backwards (ne both): po koncu animacije clip-path ne sme več rezati padajočega menija */
 @keyframes adReveal{from{opacity:0;clip-path:inset(0 100% 0 0);}to{opacity:1;clip-path:inset(0 0 0 0);}}
-@media(prefers-reduced-motion:reduce){.a-det-pad{opacity:1;}.a-det.show .a-det-pad{animation:none;}}
+@media(prefers-reduced-motion:reduce){html:not(.zm-polno) .a-det-pad{opacity:1;}html:not(.zm-polno) .a-det.show .a-det-pad{animation:none;}}
 /* Postavke: pregledni stolpci — vrstni red najprej NAVZDOL, nato v nov stolpec desno
    (CSS multicol). Ime levo, količina krepko desno, tanka ločnica pod vsako postavko. */
 .a-det ul{list-style:none;column-width:250px;column-gap:30px;margin:4px 0 2px;}
@@ -796,7 +796,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
 /* ══════════ mehak prehod med temama ══════════ */
 body,.topbar,.side,.main,.panel,.row,.a-row,.arts,.a-det,.fak-card,.fak-tot,.stat,.bars,.rows .empty,.seg,.seg-b,.tema-b,input,select,textarea,.btn,.btn-narrow,.fak-chip,.auth,.auth-top,.auth-hero,.auth-claim,.auth-claim em,.wordmark,.wordmark span,.auth-box,.eyebrow,.sub,.auth-foot,.profile-picker h1,.field label,.icon-btn{
   transition:background-color .32s ease,border-color .32s ease,color .28s ease;}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+@media (prefers-reduced-motion:reduce){html:not(.zm-polno) *{animation:none!important;transition:none!important;}}   /* Zmogljivo (zm-polno): uporabnik je gibanje izrecno izbral */
 html.sc-notrans,html.sc-notrans *,html.sc-notrans *::before,html.sc-notrans *::after{transition:none!important;}
 /* Gladko pretapljanje ob preklopu teme (GPU, brez janka). */
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.34s;animation-timing-function:ease;mix-blend-mode:normal;}
@@ -2069,7 +2069,7 @@ h3.sec,h3.sec-h,.empty h3,.fak-card-h h3,.adm-ime,.stat-num,.auth-claim,
 /* Kartica med nalaganjem vsebine pred odprtjem okna (redko opazno — navadno je že naložena). */
 .row.nalaga,.a-row.nalaga{cursor:progress;animation:nalagaPulz .7s ease-in-out infinite alternate;}
 @keyframes nalagaPulz{to{opacity:.62;}}
-@media(prefers-reduced-motion:reduce){.row.nalaga,.a-row.nalaga{animation:none;opacity:.7;}}
+@media(prefers-reduced-motion:reduce){html:not(.zm-polno) :is(.row,.a-row).nalaga{animation:none;opacity:.7;}}
 html.okno-zaklep{overflow:hidden;}
 
 /* Glava = kartica, postavljena za okno: brez okvirja in hoverja, statusni levi rob ostane. */
@@ -3184,7 +3184,7 @@ html.v5:not(.sc-sam) .auth::after{bottom:0;}
   background:linear-gradient(105deg,transparent 0 40%,var(--cov-ink) 50%,transparent 60% 100%) 100% 0/280% 100% no-repeat;
   -webkit-background-clip:text;background-clip:text;animation:authSij 9s cubic-bezier(.45,0,.25,1) 2s infinite;}
 @keyframes authSij{0%{background-position:100% 0}24%,100%{background-position:0 0}}
-@media(prefers-reduced-motion:reduce){ .v5 .auth-claim em{animation:none;} }
+@media(prefers-reduced-motion:reduce){ html:not(.zm-polno).v5 .auth-claim em{animation:none;} }
 .v5 .auth-slot{align-self:center;justify-self:center;width:100%;max-width:380px;display:flex;flex-direction:column;align-items:stretch;}
 .v5 .auth-box{max-width:none;}
 .v5 .auth-box h1{font-family:var(--sans);font-size:clamp(1.9rem,2.4vw,2.4rem);font-weight:500;letter-spacing:-.03em;line-height:1.1;margin:0 0 32px;}
@@ -3272,7 +3272,7 @@ html.v5:not(.sc-sam) .auth::after{bottom:0;}
 .dk-meni button.danger:hover:not(:disabled),.dk-meni button.danger:focus-visible{background:color-mix(in srgb,var(--st-bad) 8%,transparent);}
 .dk-meni button:disabled{color:var(--mid);opacity:.5;cursor:default;}
 @keyframes dkMeni{from{opacity:0;transform:translateY(-4px) scale(.98);}to{opacity:1;transform:none;}}
-@media(prefers-reduced-motion:reduce){ .dk-meni{animation:none;} }
+@media(prefers-reduced-motion:reduce){ html:not(.zm-polno) .dk-meni{animation:none;} }
 /* spusti za nalaganje */
 .v5 .dk-spusti{position:fixed;inset:calc(12px + var(--vrh,0px)) 12px 12px;z-index:1250;display:flex;align-items:center;justify-content:center;pointer-events:none;
   border:2px dashed var(--line-strong);border-radius:var(--radius);background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
@@ -3466,7 +3466,7 @@ html.v5:not(.sc-sam) .auth::after{bottom:0;}
 .v5 .rf-rez-akc svg{width:18px;height:18px;}
 .v5 .rf-rez-akc button:disabled{opacity:.6;}
 @media(min-width:561px){ .v5 .rf-rez-akc{grid-template-columns:auto auto;justify-content:end;} .v5 .rf-rez-akc:has(> :nth-child(3)){grid-template-columns:auto auto auto;} .v5 .rf-rez-akc button{width:auto;} .v5 .rf-rez-akc .ur-save{order:2;} }
-@media(prefers-reduced-motion:reduce){ .v5 .rf-stevec b.rf-bump,.v5 .rf-uspeh-i{animation:none;} }
+@media(prefers-reduced-motion:reduce){ html:not(.zm-polno).v5 :is(.rf-stevec b.rf-bump,.rf-uspeh-i){animation:none;} }
 .v5 .str-rfid{margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line);}
 .v5 .str-rfid:empty{display:none;}
 .v5 .str-rfid-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 8px;}
@@ -3642,6 +3642,8 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
    črn krog z začetnicami), pod njo ime. × (pozabi profil) je stekleni gumb v kotu, biometrija v nasprotnem kotu; »Drug
    uporabnik« ima namesto slike +. Naslov kot pri obrazcu. Aplikacija RFID (.rfa) ohrani svoje manjše ploščice (tri v vrsti). */
 .v5:not(.rfa) #auth .profile-picker{max-width:none;text-align:left;padding-bottom:0;}
+/* sporočilo (Odkleni s Face ID …) pod karticami, ne čez »Prijava z geslom« */
+.v5:not(.rfa) #auth #ppMsg{position:static;margin:14px 0 0;text-align:center;}
 .v5:not(.rfa) #auth .profile-picker h1{margin:0 0 28px;font-size:clamp(1.9rem,2.4vw,2.4rem);font-weight:500;letter-spacing:-.03em;line-height:1.1;color:var(--ink);}
 .v5:not(.rfa) #auth .profile-picker .pp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;justify-content:stretch;}
 .v5:not(.rfa) .pp-tile-wrap,.v5:not(.rfa) .pp-add{position:relative;width:auto;min-width:0;display:flex;}
@@ -3667,6 +3669,8 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
   background:color-mix(in srgb,var(--bg) 70%,transparent);-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);
   box-shadow:0 1px 2px rgba(0,0,0,.08),inset 0 0 0 1px color-mix(in srgb,var(--ink) 6%,transparent);}
 .v5:not(.rfa) .pp-bio,.v5:not(.rfa) .pp-plus{will-change:transform;}   /* ikona SVG na naslovnici (Chrome na Androidu) */
+.v5:not(.rfa) .pp-tile.odklepam .pp-nm{font-size:var(--fs-13);}
+.v5:not(.rfa) .pp-tile.odklepam .bio-pulse{width:7px;height:7px;margin-right:6px;}
 .v5:not(.rfa) .pp-tile-x{top:8px;right:8px;width:30px;height:30px;padding:0;opacity:0;transition:opacity .14s ease,background-color .14s ease;}
 .v5:not(.rfa) .pp-tile-x svg{width:14px;height:14px;}
 .v5:not(.rfa) .pp-tile-x::before{content:"";position:absolute;inset:-7px;}   /* dotik: 44 px */
@@ -3676,3 +3680,96 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
 .v5:not(.rfa) .pp-bio{left:8px;top:8px;width:30px;height:30px;}
 .v5:not(.rfa) .pp-bio svg{width:15px;height:15px;}
 .v5:not(.rfa) .pp-plus svg{width:22px;height:22px;margin:0;}
+
+/* ══ GIBANJE (4.91) ══
+   En sistem za vse prehode. Podpisna krivulja --gib se takoj odzove in dolgo, mehko pristane (kot sistemska okna v iOS).
+   Vstop je počasnejši od izstopa, poti so kratke, animira se le transform in opacity. */
+:root{--gib:cubic-bezier(.32,.72,0,1);--gib-ven:cubic-bezier(.4,0,1,1);--gib-t2:.28s;--gib-t3:.42s;--gib-t4:.6s;}
+@keyframes gibVstop{from{opacity:0;transform:translate3d(var(--gib-x,0),var(--gib-y,12px),0);}to{opacity:1;transform:none;}}
+@keyframes gibKartica{from{opacity:0;transform:translate3d(var(--gib-x,0),var(--gib-y,14px),0) scale(.985);}to{opacity:1;transform:none;}}
+@keyframes gibPojav{from{opacity:0;}to{opacity:1;}}
+@keyframes gibMeni{from{opacity:0;transform:translate3d(0,-6px,0) scale(.97);}to{opacity:1;transform:none;}}
+
+/* razdelek: glava, orodja in vsebina v kratkem zaporedju, kartice kot val */
+.v5 .sec.sec-anim{animation:none;}
+.v5 .sec.sec-anim > *{animation:gibVstop var(--gib-t4) var(--gib) backwards;}
+.v5 .sec.sec-anim > :nth-child(2){animation-delay:.04s;}
+.v5 .sec.sec-anim > :nth-child(n+3){animation-delay:.08s;}
+.v5 .sec.sec-anim > :has(> :is(.rows,.fak-grid,.art-skupine)){animation:none;}
+.v5 #sec-cipi.sec-anim > #cipiVsebina{animation-name:gibPojav;}   /* vrstica z gumbi je pritrjena: premik starša bi jo za trenutek zamaknil */
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > *{animation:gibKartica var(--gib-t4) var(--gib) backwards;animation-delay:calc(.07s + var(--gib-i,12) * 24ms);}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(1){--gib-i:0;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(2){--gib-i:1;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(3){--gib-i:2;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(4){--gib-i:3;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(5){--gib-i:4;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(6){--gib-i:5;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(7){--gib-i:6;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(8){--gib-i:7;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(9){--gib-i:8;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(10){--gib-i:9;}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(11){--gib-i:10;}
+/* zavihki iste skupine: glava stoji, vsebina pride s strani, v smeri zavihka */
+.v5 .sec.sec-desno{--gib-x:24px;--gib-y:0px;}
+.v5 .sec.sec-levo{--gib-x:-24px;--gib-y:0px;}
+.v5 .sec:is(.sec-levo,.sec-desno) > :is(.head,.sk-tabs){animation:none;}
+.v5 .sec.sec-pogled > *{animation:none;}   /* seznam ↔ mreža: premešajo se le kartice */
+/* nova vsebina namesto nalagalnega traku */
+.v5 #fakList .fak-grid{animation:gibPojav var(--gib-t3) ease;}
+
+/* zavihki, segmenti, izbira teme: en tablet zdrsne do novega gumba (zapiše ga portal.js) */
+.v5 :is(.pris-tabs,.seg,.tema-izbira){position:relative;}
+.v5 :is(.pris-tabs,.seg,.tema-izbira) > :is(.pris-tab,.seg-b,.tema-b){position:relative;z-index:1;}
+.v5 .gib-tablet{position:absolute;z-index:0;display:block;border-radius:var(--r-full);background:var(--surface);box-shadow:var(--shadow-sm);pointer-events:none;}
+.v5[data-theme="dark"] .gib-tablet{background:rgba(255,255,255,.12);}
+.v5 .adm-tabs .gib-tablet{border-radius:var(--r-sm);}
+.v5 .gib-drsi > .on{background:none!important;box-shadow:none!important;}
+.v5 .gib-drsi > :not(.gib-tablet){transition:color var(--gib-t2) ease!important;}
+.v5 .gib-mir > *{transition:none!important;}
+.side-slider{transition:transform var(--gib-t3) var(--gib),width var(--gib-t3) var(--gib),height var(--gib-t3) var(--gib),opacity var(--gib-t2) ease;}
+
+/* odziv na dotik: gumb in kartica se ob pritisku hitro stisneta in mehko vrneta */
+.v5 :is(.btn,.btn-narrow,.btn-mini,.ur-save,.cgrp-btn,.icon-btn,.ur-add,.fak-print,.sc-modal-btn,.doc-x,.burger,.ae-save,.opomba-save,.fak-chip,.pris-tab,.seg-b,.tema-b){
+  transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease,opacity .18s ease,transform var(--gib-t3) var(--gib);}
+.v5 :is(.btn,.btn-narrow,.btn-mini,.ur-save,.cgrp-btn,.icon-btn,.ur-add,.fak-print,.sc-modal-btn,.doc-x,.burger,.ae-save,.opomba-save,.fak-chip,.pris-tab,.seg-b,.tema-b):not(:disabled,.nalaga):active{
+  transform:scale(.96);transition-duration:.18s,.18s,.18s,.18s,.18s,.09s;}
+.v5 .lcell{transition:transform var(--gib-t3) var(--gib);}
+.v5[data-view] .fak-grid .fak-card:not(.open){transition:border-color .18s ease,box-shadow .22s ease,transform var(--gib-t3) var(--gib);}
+.v5[data-view="grid"] .lcell:active,.v5[data-view] .fak-grid .fak-card:not(.open):active{transform:scale(.982);transition-duration:.1s;}
+.v5[data-view="list"] .lcell:active{transform:scale(.992);transition-duration:.1s;}
+
+/* potrditve in opozorila */
+.v5 .sc-modal-back{transition:opacity .18s ease,-webkit-backdrop-filter .18s ease,backdrop-filter .18s ease;}
+.v5 .sc-modal-back.show{transition:opacity .3s ease,-webkit-backdrop-filter .42s var(--gib),backdrop-filter .42s var(--gib);}
+.v5 .sc-modal{transform:translate3d(0,14px,0) scale(.965);transition:transform .18s var(--gib-ven);}
+.v5 .sc-modal-back.show .sc-modal{transition:transform var(--gib-t4) var(--gib);}
+.v5 .sc-modal.gor-modal{animation:gibKartica var(--gib-t3) var(--gib);}   /* odpre se brez prehoda ozadja */
+/* okno: ob zapiranju temno ozadje izgine hitreje od krčenja, da okno ne pristane na sivem */
+.okno-back:not(.show) .okno-zatemni{transition:opacity .16s ease,-webkit-backdrop-filter .16s ease,backdrop-filter .16s ease;}
+.v5 .sc-toast{transform:translate3d(-50%,18px,0) scale(.96);transition:opacity .16s ease,transform .2s var(--gib-ven);}
+.v5 .sc-toast.show{transform:translate3d(-50%,0,0);transition:opacity .26s ease,transform var(--gib-t4) var(--gib);}
+.v5 .arh-izbira{transition:opacity .16s ease,transform .2s var(--gib-ven),visibility 0s linear .2s;}
+.v5 .arh-izbira.show{transition:opacity .26s ease,transform var(--gib-t3) var(--gib),visibility 0s;}
+.v5 .cs-panel{transform-origin:top center;animation:gibMeni var(--gib-t2) var(--gib);}
+.v5 .dk-meni{animation:gibMeni var(--gib-t2) var(--gib);}
+.pg-mini{transition:transform var(--gib-t3) var(--gib),opacity .2s ease;}
+.burger span{transition:transform var(--gib-t3) var(--gib),opacity .2s ease,width var(--gib-t3) var(--gib),height var(--gib-t3) var(--gib);}
+
+/* meni na telefonu: vrstice pridejo kot val, zapiranje je hitro */
+@media(max-width:900px){
+  .v5 .side{transform:translate3d(0,-8px,0);transition:opacity .16s ease,transform .2s var(--gib-ven),visibility 0s linear .2s;}
+  .v5 .side.on{transition:opacity .12s ease,transform var(--gib-t3) var(--gib);}
+  .v5 .side.on > a{--gib-y:-10px;animation:gibVstop var(--gib-t4) var(--gib) backwards;animation-delay:calc(.04s + var(--gib-i,10) * 22ms);}
+  .v5 .side.on > a:nth-of-type(1){--gib-i:0;}
+  .v5 .side.on > a:nth-of-type(2){--gib-i:1;}
+  .v5 .side.on > a:nth-of-type(3){--gib-i:2;}
+  .v5 .side.on > a:nth-of-type(4){--gib-i:3;}
+  .v5 .side.on > a:nth-of-type(5){--gib-i:4;}
+  .v5 .side.on > a:nth-of-type(6){--gib-i:5;}
+  .v5 .side.on > a:nth-of-type(7){--gib-i:6;}
+  .v5 .side.on > a:nth-of-type(8){--gib-i:7;}
+  .v5 .side.on > a:nth-of-type(9){--gib-i:8;}
+}
+
+/* prijava: vsak korak se pojavi sam od sebe, ko postane viden */
+.v5 :is(#loginForm,#regForm,#gesloForm,#newPwForm,.reg-korak){animation:gibVstop var(--gib-t3) var(--gib) backwards;--gib-y:8px;}

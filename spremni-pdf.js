@@ -10,7 +10,7 @@
   var PT = 0.75;
   var DPDF = { M: 34.02, SP: 39.69, INK: [10 / 255, 10 / 255, 10 / 255], SIVA: [102 / 255, 102 / 255, 102 / 255], SIVA2: [107 / 255, 114 / 255, 128 / 255],
     CRTA: [236 / 255, 236 / 255, 236 / 255], OKVIR: [220 / 255, 220 / 255, 220 / 255], OKVIR2: [221 / 255, 221 / 255, 221 / 255],
-    POPR_BG: [253 / 255, 243 / 255, 232 / 255], POPR: [138 / 255, 90 / 255, 0], POZOR: [138 / 255, 90 / 255, 0] };
+    POZOR: [138 / 255, 90 / 255, 0] };
   // Osnovna črta prve vrstice v okvirju: vrh + (višina vrstice − višina pisave)/2 + vzpon (Archivo ≈ 0,878 em, vsa ≈ 1,088 em).
   function dpdfOsnova(vrh, pisavaPt, vrsticaPt) { return vrh + (vrsticaPt - 1.088 * pisavaPt) / 2 + 0.878 * pisavaPt; }
   function dpdfGlava(doc) {
@@ -106,7 +106,7 @@
 
   // En spremni list na trenutni strani. p (že oblikovano besedilo — portal in aplikacija imata
   // vsak svoja polja): { stevilka, naziv, nazivSek, oddaja, postavke: [{ naziv, kosov }],
-  // kg (besedilo ali ''), opomba ('' = brez), popravek ('' = brez) }
+  // kg (besedilo ali ''), opomba ('' = brez) }
   function stran(doc, p) {
     var items = p.postavke || [];
     var M = DPDF.M, R = doc.W - M;
@@ -145,13 +145,6 @@
         else doc.text(xx, ob, vr, { size: fs, color: DPDF.INK });
       });
       y += hh;
-    }
-    if (p.popravek) {
-      y += 10 * PT;
-      var fsp = 11 * PT, hp = 6 * PT * 2 + fsp * 1.25;
-      if (!dpdfProstor(doc, y, hp)) y = dpdfNovaStran(doc);
-      doc.rrect(M, y, R - M, hp, 8 * PT, { fill: DPDF.POPR_BG });
-      doc.text(M + 10 * PT, dpdfOsnova(y + 6 * PT, fsp, fsp * 1.25), p.popravek, { size: fsp, weight: 600, color: DPDF.POPR });
     }
   }
 

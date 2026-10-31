@@ -39,7 +39,7 @@
       // ampak se zvezno spremenijo SAMI barvni žetoni (--bg, --ink, --surface …, registrirani z @property v portal.css).
       // Vsi elementi v vsakem trenutku dobijo isto vmesno barvo → cel zaslon hkrati. Barva sistemskih pasov
       // (theme-color) se med prehodom posodablja sproti z isto krivuljo; na koncu Safari pasova še enkrat vzorči.
-      var mirno = false; try { mirno = matchMedia('(prefers-reduced-motion: reduce)').matches || de.classList.contains('zm-brez-anim'); } catch (e) {}
+      var mirno = false; try { mirno = !de.classList.contains('zm-polno') && (matchMedia('(prefers-reduced-motion: reduce)').matches || de.classList.contains('zm-brez-anim')); } catch (e) {}
       var animira = !mirno && _temaZetoniAnimirani();
       clearTimeout(de._temaUra); cancelAnimationFrame(de._temaRaf || 0);
       if (!animira) {
@@ -151,7 +151,7 @@
     const v = pogledPref();
     document.querySelectorAll('.pogled-seg').forEach(seg => seg.querySelectorAll('.seg-b').forEach(b => b.classList.toggle('on', b.dataset.view === v)));
   }
-  function nastaviPogled(v) { try { localStorage.setItem('sc-view', v === 'grid' ? 'grid' : 'list'); } catch (e) {} uporabiPogled(); osveziPogledSege(); if (typeof shraniNastavitve === 'function') shraniNastavitve(); }
+  function nastaviPogled(v) { try { localStorage.setItem('sc-view', v === 'grid' ? 'grid' : 'list'); } catch (e) {} uporabiPogled(); osveziPogledSege(); { const _s = document.querySelector('.sec:not(.hidden)'); if (_s) secVstop(_s, 'sec-pogled'); } if (typeof shraniNastavitve === 'function') shraniNastavitve(); }
   (function initPogled() {
     document.querySelectorAll('.pogled-seg .seg-b').forEach(b => b.addEventListener('click', () => nastaviPogled(b.dataset.view)));
     uporabiPogled(); osveziPogledSege();
@@ -188,12 +188,35 @@
   function zmUporabi() {
     var z = zmBeri(), de = document.documentElement;
     de.classList.toggle('zm-brez-anim', !z.anim);
+    de.classList.toggle('zm-polno', z.nacin === 'polno');
     de.classList.toggle('zm-brez-stekla', !z.steklo);
     de.classList.toggle('zm-brez-teksture', !z.tekstura);
     return z;
   }
-  // manj gibanja: sistemska želja ali Zmogljivost → Animacije izklopljene (vse animacije v JS to preverijo)
-  function manjGibanja() { try { return document.documentElement.classList.contains('zm-brez-anim') || !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } }
+  // manj gibanja: sistemska želja ali Zmogljivost → Animacije izklopljene (vse animacije v JS to preverijo); Zmogljivo ima prednost pred sistemsko željo
+  function manjGibanja() { try { var de = document.documentElement; if (de.classList.contains('zm-polno')) return false; return de.classList.contains('zm-brez-anim') || !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } }
+  var GIB_KRIVULJA = 'cubic-bezier(.32,.72,0,1)';   // ista kot --gib v portal.css
+  // Zavihki, segmenti, izbira teme: poudarek zdrsne od prejšnjega gumba do novega, namesto da bi ena podlaga ugasnila in druga zasvetila.
+  // Izmerimo ob kliku, tablet postavimo tik pred izrisom, po koncu ga ni več — zavihkov ni treba prilagajati.
+  document.addEventListener('click', function (e) {
+    var g = e.target.closest && e.target.closest('.pris-tab,.seg-b,.tema-b'), sk = g && g.parentElement;
+    if (!g || !sk.matches('.pris-tabs,.seg,.tema-izbira') || manjGibanja()) return;
+    var star = sk.querySelector(':scope > .on'), tece = sk.querySelector(':scope > .gib-tablet');
+    if (!star || star === g) return;
+    var x0 = star.offsetLeft, y0 = star.offsetTop, w0 = star.offsetWidth;
+    if (tece) { var r = tece.getBoundingClientRect(), k = sk.getBoundingClientRect(); x0 = r.left - k.left; y0 = r.top - k.top; w0 = r.width; tece.remove(); }
+    requestAnimationFrame(function () {
+      var sk2 = sk.matches('.sk-tabs') ? document.querySelector('.sec:not(.hidden) .sk-tabs') : sk;   // zavihki skupine so v vsakem razdelku svoji
+      var nov = sk2 && sk2.isConnected && sk2.querySelector(':scope > .on'); if (!nov) return;
+      var x = nov.offsetLeft, y = nov.offsetTop, w = nov.offsetWidth; if (x === x0 && y === y0) return;
+      var t = document.createElement('i'); t.className = 'gib-tablet';
+      t.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + nov.offsetHeight + 'px';
+      sk2.classList.add('gib-drsi'); sk2.appendChild(t);
+      var konec = function () { if (!t.parentNode) return; sk2.classList.add('gib-mir'); sk2.classList.remove('gib-drsi'); t.remove(); void sk2.offsetWidth; sk2.classList.remove('gib-mir'); };
+      t.animate([{ transform: 'translate(' + (x0 - x) + 'px,' + (y0 - y) + 'px)', width: w0 + 'px' }, { transform: 'none', width: w + 'px' }], { duration: 400, easing: GIB_KRIVULJA }).finished.then(konec, konec);
+    });
+  }, true);
+  document.addEventListener('touchstart', function () {}, { passive: true });   // brez tega iOS na dotik ne vklopi :active (odziv gumbov in kartic)
   // drsnik: Varčno = vse izklopljeno, Uravnoteženo = vse, kar naprava zmore (zmSamodejno), Zmogljivo = vse vklopljeno
   var ZM_STOPNJE = ['varcno', 'auto', 'polno'], ZM_IMENA = ['Varčno', 'Uravnoteženo', 'Zmogljivo'];
   function zmOznaci() {
@@ -781,7 +804,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '4.90 · BETA';
+  var APP_VERZIJA = '4.91 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -1163,6 +1186,7 @@
     zacniUtrip(user.id);
     /* Naslov nastavimo že pred prikazom, da za trenutek ne utripne »Pregled«. */
     if ($('domovNaslov')) $('domovNaslov').textContent = OSEBJE ? (pozdrav() + ', ' + prvoIme()) : 'Vaš pregled';
+    if (window.scBootZnova && window.scBootZnova()) await new Promise(ok => setTimeout(ok, 220));   // po prijavi se nalagalni zaslon pretopi čez prijavo (ob zagonu je že prikazan)
     $('auth').style.display = 'none';
     $('app').classList.add('show');
     if (POV.stanje !== 'ok') povRisi();   // trak iz (zdaj skrite) glave prijave v glavo portala
@@ -1560,6 +1584,14 @@
     var h = String(location.hash || '').replace(/^#/, '').split('/')[0];   // #dokumenti/Mapa → dokumenti
     return /^[a-z]+$/.test(h) && document.getElementById('sec-' + h) ? h : 'domov';
   }
+  var _secZdaj = null;
+  function secVstop(el, smer) {
+    var vsi = ['sec-anim', 'sec-levo', 'sec-desno', 'sec-pogled'];
+    el.classList.remove.apply(el.classList, vsi); void el.offsetWidth;
+    el.classList.add('sec-anim'); if (smer) el.classList.add(smer);
+    clearTimeout(el._gibUra);   // razred mora iti, sicer bi se vsak kasnejši izris seznama znova animiral
+    el._gibUra = setTimeout(function () { el.classList.remove.apply(el.classList, vsi); }, 1000);
+  }
   function pojdi(kam) {
     if (_okno) oknoZapri(true);
     // Admin & Konzola: samo lastnik.
@@ -1578,9 +1610,14 @@
     document.querySelectorAll('.sec').forEach(s => {
       s.classList.toggle('hidden', s.id !== 'sec-' + kam);
     });
-    // Gladek prehod na novo prikazani razdelek.
+    // Gladek prehod na novo prikazani razdelek. Med zavihki iste skupine glava stoji, vsebina pride s strani, v smeri zavihka.
     var _ns = document.getElementById('sec-' + kam);
-    if (_ns) { _ns.classList.remove('sec-anim'); void _ns.offsetWidth; _ns.classList.add('sec-anim'); }
+    if (_ns && kam !== _secZdaj) {
+      var _cl = _secZdaj && skupinaOd(_secZdaj) === skupinaOd(kam) ? claniSkupine(skupinaOd(kam)).map(function (x) { return x[0]; }) : [];
+      var _sm = _cl.indexOf(kam) - _cl.indexOf(_secZdaj);
+      secVstop(_ns, _cl.length ? (_sm > 0 ? 'sec-desno' : 'sec-levo') : '');
+    }
+    _secZdaj = kam;
     document.querySelectorAll('#side a[data-go]').forEach(a => {
       a.classList.toggle('on', skupinaOd(a.dataset.go) === skupinaOd(kam));
     });
@@ -4271,7 +4308,13 @@
      na istem elementu. Okno zraste iz kartice in se vanjo vrne: premik + clip-path,
      ne scale, zato se besedilo med animacijo ne razteguje. */
   var _okno = null;
-  var OKNO_KRIVULJA = 'cubic-bezier(.22,.61,.36,1)';   // ista krivulja kot prej razpiranje kartice
+  var OKNO_KRIVULJA = GIB_KRIVULJA;
+  var OKNO_RAST_MS = 480, OKNO_KRCENJE_MS = 340;
+  // telefon: okno v mirovanju nima zaobljenih robov, med rastjo in krčenjem pa jih ima (kartica je zaobljena)
+  function oknoRobovi(panel, odpri, ms) {
+    if (parseFloat(getComputedStyle(panel).borderTopLeftRadius)) return;
+    panel.animate(odpri ? [{ borderRadius: '30px' }, { borderRadius: '0px' }] : [{ borderRadius: '0px' }, { borderRadius: '30px' }], { duration: ms, easing: OKNO_KRIVULJA, fill: odpri ? 'none' : 'forwards' });
+  }
   function oknoMirno() { return manjGibanja(); }
   // Glava okna je kopija kartice (isti podatki, ista statusna barva), postavljena za okno.
   function oknoGlava() {
@@ -4312,7 +4355,7 @@
   // Vse to izvaja grafična kartica — brez ponovnega izrisa vsebine (clip-path ga je zahteval)
   // in brez ločene površine, za katero je senca okna zamujala.
   // Nasprotni razteg je pravilen le, če je v vsakem trenutku točno 1/s, zato ključe
-  // izračunamo v 24 korakih z isto krivuljo (linearno med koraki).
+  // izračunamo v 40 korakih z isto krivuljo (linearno med koraki).
   function oknoKrivulja(x1, y1, x2, y2) {
     function b(t, a1, a2) { var u = 1 - t; return 3 * u * u * t * a1 + 3 * u * t * t * a2 + t * t * t; }
     return function (x) {
@@ -4322,11 +4365,11 @@
       return b(t, y1, y2);
     };
   }
-  var OKNO_ODPRI = oknoKrivulja(.22, .61, .36, 1), OKNO_ZAPRI = oknoKrivulja(.4, 0, .2, 1);
+  var OKNO_ODPRI = oknoKrivulja(.32, .72, 0, 1), OKNO_ZAPRI = OKNO_ODPRI;
   function oknoKljuci(o, krivulja, zapri) {
     var c = o.kartica.getBoundingClientRect(), p = o.panel.getBoundingClientRect();
     var sx0 = Math.max(0.02, c.width / p.width), sy0 = Math.max(0.02, c.height / p.height);
-    var dx = c.left - p.left, dy = c.top - p.top, N = 24, okno = [], notr = [];
+    var dx = c.left - p.left, dy = c.top - p.top, N = 40, okno = [], notr = [];
     for (var i = 0; i <= N; i++) {
       var t = i / N, e = krivulja(t);
       var f = zapri ? e : 1 - e;   // delež »kartice«: 1 = kartica, 0 = okno
@@ -4445,7 +4488,7 @@
       o.ro = new ResizeObserver(function () {
         var h = panel.offsetHeight;
         if (!o.morf && !o.zapiram && Math.abs(h - o.visina) > 2 && panel.animate) {
-          panel.animate([{ height: o.visina + 'px' }, { height: h + 'px' }], { duration: 240, easing: OKNO_KRIVULJA });
+          panel.animate([{ height: o.visina + 'px' }, { height: h + 'px' }], { duration: 340, easing: OKNO_KRIVULJA });
         }
         o.visina = h;
       });
@@ -4458,12 +4501,13 @@
     var duh = oknoDuh(o);
     kartica.classList.add('okno-vir');   // kartica se spremeni v okno: njeno mesto se izprazni takoj
     // Okno (s senco) raste iz kartice; kopija kartice nad njim izgine; vsebina se pretopi.
-    panel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 90, easing: 'linear' });
-    duh.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 170, delay: 60, easing: 'ease', fill: 'forwards' });
-    notr.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 190, delay: 110, easing: 'ease', fill: 'backwards' });
-    notr.animate(kl.notr, { duration: 380, easing: 'linear' });
+    panel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 70, easing: 'linear' });
+    duh.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 130, delay: 30, easing: 'ease', fill: 'forwards' });
+    notr.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, delay: 70, easing: 'ease', fill: 'backwards' });
+    notr.animate(kl.notr, { duration: OKNO_RAST_MS, easing: 'linear' });
     var konecRasti = function () { duh.remove(); o.morf = false; o.visina = panel.offsetHeight; back.classList.add('okno-cel'); };   // odprto: telefon — polno ozadje (Safari po njem pobarva pasova)
-    panel.animate(kl.okno, { duration: 380, easing: 'linear' }).finished.then(konecRasti, konecRasti);
+    oknoRobovi(panel, true, OKNO_RAST_MS);
+    panel.animate(kl.okno, { duration: OKNO_RAST_MS, easing: 'linear' }).finished.then(konecRasti, konecRasti);
     oknoFokus(o);
   }
   // Fokus na okno samo (bralnik zaslona prebere naslov okna, Tab gre na prvi gumb v njem).
@@ -4519,11 +4563,12 @@
     o.notr.getAnimations().forEach(function (a) { a.cancel(); });
     var kl = oknoKljuci(o, OKNO_ZAPRI, true);
     var duh = oknoDuh(o);
-    o.notr.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: 'ease', fill: 'forwards' });
-    o.notr.animate(kl.notr, { duration: 320, easing: 'linear', fill: 'forwards' });
-    duh.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: 150, easing: 'ease', fill: 'both' });
-    o.panel.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, delay: 230, easing: 'linear', fill: 'forwards' });   // senca okna ugasne, ko je okno že kartica
-    o.panel.animate(kl.okno, { duration: 320, easing: 'linear', fill: 'forwards' }).finished.then(konec, konec);
+    o.notr.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, easing: 'ease', fill: 'forwards' });
+    o.notr.animate(kl.notr, { duration: OKNO_KRCENJE_MS, easing: 'linear', fill: 'forwards' });
+    duh.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 130, delay: 60, easing: 'ease', fill: 'both' });
+    o.panel.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, delay: 130, easing: 'linear', fill: 'forwards' });   // senca okna ugasne, ko je okno že kartica
+    oknoRobovi(o.panel, false, OKNO_KRCENJE_MS);
+    o.panel.animate(kl.okno, { duration: OKNO_KRCENJE_MS, easing: 'linear', fill: 'forwards' }).finished.then(konec, konec);
   }
   // Seznam pod oknom je bil izrisan na novo (shranjevanje, brisanje, osvežitev):
   // poveži okno z novo kartico ali ga zapri, če kartice ni več.
@@ -4587,7 +4632,7 @@
       return _glava + `<div class="lcell arh-${stat}${izbran ? ' izbran' : ''}">
     <button class="a-row" type="button" data-i="${i}" data-id="${l.id}" style="${naslovnica(BARVE_STANJA[stat], l.id)}" aria-expanded="false"${klikljivo && ARH_IZB ? ' aria-pressed="' + (izbran ? 'true' : 'false') + '"' : ''}
       ${klikljivo ? '' : 'style="cursor:default"'}>
-      ${klikljivo ? '<span class="a-sel" aria-hidden="true"></span>' : ''}${chk}<span class="a-num">${escape_(l.number || '—')}${l.popravljeno_at ? '<span class="a-pop" title="Popravljeno v aplikaciji' + (l.popravil ? ' · ' + escape_(l.popravil) : '') + '">' + IKO_T_SVINC + '</span>' : ''}</span>
+      ${klikljivo ? '<span class="a-sel" aria-hidden="true"></span>' : ''}${chk}<span class="a-num">${escape_(l.number || '—')}${OSEBJE && l.popravljeno_at ? '<span class="a-pop" title="Popravljeno v aplikaciji' + (l.popravil ? ' · ' + escape_(l.popravil) : '') + '">' + IKO_T_SVINC + '</span>' : ''}</span>
       <span class="a-cli">${escape_(OSEBJE ? ORGIME[l.org_id] || '—' : l.issued_name || '')}${l.transport === 'izredni' ? '<span class="a-izr" title="Izredni prevoz">Izredni</span>' : ''}</span>
       <span class="a-foot${mer ? ' z-mero' : ''}"><span class="num a-date">${datum(l.doc_date)}</span>${OSEBJE && l.issued_name ? '<span class="a-izdal" title="Izdelal spremni list">' + escape_(l.issued_name) + '</span>' : ''}<span class="num a-qty">${stevilo(l.total_pieces)} kos</span>${mer}</span>
       <span class="chev" aria-hidden="true">${klikljivo ? '›' : ''}</span>
@@ -4981,7 +5026,7 @@
   { const xb = $('arhivObdX'); if (xb) xb.addEventListener('click', () => { const a = $('arhivOd'), b = $('arhivDo'); if (a) a.value = ''; if (b) b.value = ''; risiArhiv(); }); }
   { const _nb = $('arhivNovBtn'); if (_nb) _nb.addEventListener('click', () => novList()); }
   // Domov: isti nov spremni list — odpre se v Spremnih listih (okno zraste iz tamkajšnjega gumba, nov list se pokaže v seznamu)
-  { const _db = $('domovNovBtn'); if (_db) _db.addEventListener('click', () => { pojdi('arhiv'); requestAnimationFrame(() => novList()); }); }
+  { const _db = $('domovNovBtn'); if (_db) _db.addEventListener('click', () => novList(_db)); }
   { const _kb = $('arhivKosBtn'); if (_kb) _kb.addEventListener('click', () => arhivKos()); }
   // ── Koš spremnih listov (Nedavno brisani — obnovljivi) ──
   async function arhivKos() {
@@ -5140,7 +5185,7 @@
     const seznam = items.length ? '<ul>' + items.map(p => `<li><span title="${escape_(p.naziv)}">${escape_(p.naziv)}</span><b>${stevilo(p.kosov)}</b></li>`).join('') + '</ul>' : '<p class="u-sub">Ta spremni list nima postavk.</p>';
     const prevozV = `<span class="prevoz-znak ${n.transport === 'izredni' ? 'izr' : 'red'}">${n.transport === 'izredni' ? 'Izredni prevoz' : 'Redni prevoz'}</span>`;
     const izdalV = `<p class="u-sub" style="margin-top:8px">${prevozV}${n.issued_name ? ' · Izdal: ' + escape_(n.issued_name) : ''}</p>`;
-    const popravek = n.popravljeno_at ? `<div class="ur-popravek">${IKO_T_SVINC}Popravljeno · ${escape_(n.popravil || 'osebje')} · ${datumcas(n.popravljeno_at)}${n.popravki ? '<div class="ur-popravki">' + escape_(n.popravki).replace(/\n/g, '<br>') + '</div>' : ''}</div>` : '';
+    const popravek = OSEBJE && n.popravljeno_at ? `<div class="ur-popravek">${IKO_T_SVINC}Popravljeno · ${escape_(n.popravil || 'osebje')} · ${datumcas(n.popravljeno_at)}${n.popravki ? '<div class="ur-popravki">' + escape_(n.popravki).replace(/\n/g, '<br>') + '</div>' : ''}</div>` : '';
     const ustvarjenoV = n.source === 'portal' ? `<p class="ur-ustvarjeno">${IKO_T_PLUS}Ustvarjeno v portalu${n.issued_name ? ' · ' + escape_(n.issued_name) : ''}</p>` : '';
     const gumbi = '<div class="u-acts a-ikone"><button type="button" data-natisni title="Natisni" aria-label="Natisni">' + IKO_TISK + '</button>' +
       (OSEBJE ? '<button type="button" data-uredi title="Uredi" aria-label="Uredi">' + IKO_UREDI + '</button><button type="button" class="danger" data-izbrisi title="Izbriši" aria-label="Izbriši">' + IKO_KOS + '</button>' : '') + '</div>';
@@ -5587,7 +5632,6 @@
       table.sc-table tfoot td{border-top:1.5px solid #0a0a0a;border-bottom:none;font-weight:700;padding-top:8px}
       .sc-weight{margin-top:12px;font-size:12px;color:#0a0a0a;text-align:right;font-weight:600}
       .sc-note{margin-top:10px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;white-space:pre-wrap}
-      .sc-popr{margin-top:10px;padding:6px 10px;border-radius:8px;background:#fdf3e8;color:#8a5a00;font-size:11px;font-weight:600}
       .sc-tot{margin:12px 0 0 auto;width:55%;font-size:11px}
       .sc-tot div{display:flex;justify-content:space-between;gap:12px;padding:5px 8px;border-bottom:1px solid #ececec}
       .sc-tot div span{color:#666}
@@ -5630,7 +5674,7 @@
   var PT = 0.75;
   var DPDF = { M: 34.02, SP: 39.69, INK: [10 / 255, 10 / 255, 10 / 255], SIVA: [102 / 255, 102 / 255, 102 / 255], SIVA2: [107 / 255, 114 / 255, 128 / 255],
     CRTA: [236 / 255, 236 / 255, 236 / 255], OKVIR: [220 / 255, 220 / 255, 220 / 255], OKVIR2: [221 / 255, 221 / 255, 221 / 255],
-    POPR_BG: [253 / 255, 243 / 255, 232 / 255], POPR: [138 / 255, 90 / 255, 0], POZOR: [138 / 255, 90 / 255, 0] };
+    POZOR: [138 / 255, 90 / 255, 0] };
   var DPDF_VRSTA = 26 * PT;
   var dpdfOsnova, dpdfGlava, dpdfOkvir, dpdfVrstice, dpdfTabGlava, dpdfTabVrsta, dpdfTabela, dpdfNadaljevanje, dpdfNovaStran, dpdfProstor, dpdfNarocnik;
   function pdfPovezi() {
@@ -5658,11 +5702,10 @@
     const kg = (n.weight_kg != null && n.weight_kg !== '') ? `<div class="sc-weight">Skupaj teža perila: <b>${tezaFmt(n.weight_kg)}</b></div>` : '';
     // Na spremni list se tiska SAMO opomba za stranko (interna opomba ostane le v portalu) — enako kot v spletni aplikaciji.
     const opombaP = n.opomba_stranka ? `<div class="sc-note"><b>Opomba:</b> ${escape_(n.opomba_stranka)}</div>` : '';
-    const popr = n.popravljeno_at ? `<div class="sc-popr">Popravljeno v portalu · ${escape_(n.popravil || 'osebje')} · ${datum(String(n.popravljeno_at).slice(0, 10))}</div>` : '';
     return `<div class="sc-box sc-num"><span>Št. spremnega lista: <b>${escape_(n.number || '—')}</b></span></div>
       <div class="sc-box sc-client"><div class="cl"><div><b>Naročnik storitve:</b> <span class="cname">${escape_(naziv)}</span>${nazivSek ? ' <span class="cname-sec">(' + escape_(nazivSek) + ')</span>' : ''}</div><div class="sc-dates">Oddaja: ${datum(n.doc_date)}${izdal}${prevozP}</div></div><div class="sc-sign">Podpis:</div></div>
       <table class="sc-table"><thead><tr><th class="l">Naziv Artikla</th><th>Oddaja (št. kosov)</th></tr></thead><tbody>${rows}</tbody></table>
-      ${kg}${opombaP}${popr}`;
+      ${kg}${opombaP}`;
   }
   function natisniList(box) {
     predogledDokument({ naslov: 'Spremni list ' + escape_((box._note || {}).number || ''), docHtml: spremniDocHtml(box), pdf: function () { return spremniPdfDownload(box); } });
@@ -5711,9 +5754,9 @@
   // Po shranjevanju se okno skrči v kartico novega lista, ob preklicu nazaj v gumb.
   // ×, Esc ali klik na ozadje okno le zaprejo — vpisano ostane in se ob ponovnem
   // odprtju pokaže (nenameren klik ob okno ne izbriše vnosa).
-  function novListOkno(box) {
-    const gumb = $('arhivNovBtn');
-    oknoOdpri(gumb, box, () => $('arhivNovBtn'), {
+  function novListOkno(box, vir) {
+    const gumb = vir || $('arhivNovBtn');
+    oknoOdpri(gumb, box, () => gumb, {
       glava: () => { const h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = 'Nov spremni list'; return h; },
       obZaprtju: () => { if (box._zavrzi) { box._zavrzi = false; box.innerHTML = ''; delete box.dataset.osnutek; } }
     });
@@ -5722,16 +5765,21 @@
     if (_okno && _okno.vsebina === box) { box._zavrzi = !!zavrzi; oknoZapri(); }
     else if (zavrzi) { box.innerHTML = ''; box.classList.remove('show'); delete box.dataset.osnutek; }
   }
-  async function novList() {
+  let _novListNalog = 0;
+  async function novList(vir) {
     const box = $('novListBox');
     if (!box || _okno) return;
-    if (box.dataset.osnutek) { novListOkno(box); return; }   // nedokončan vnos: odpri ga, kot je bil
-    const gumb = $('arhivNovBtn'); if (gumb) gumb.classList.add('nalaga');
+    if (box.dataset.osnutek) { novListOkno(box, vir); return; }   // nedokončan vnos: odpri ga, kot je bil
+    // okno se odpre takoj z nalagalnim trakom; obrazec se pokaže, ko je pripravljen
+    box.innerHTML = NALAGANJE; box.style.minHeight = 'min(60vh, 520px)';
+    novListOkno(box, vir);
+    const nalog = ++_novListNalog, zaprto = () => nalog !== _novListNalog || !_okno || _okno.vsebina !== box;
     const letos = new Date().getFullYear();
     let maxSeq = 0;
     LISTI.forEach(l => { const d = String(l.number || '').split('/'); if ((parseInt(d[1], 10) || 0) === letos) { const sq = parseInt(d[0], 10) || 0; if (sq > maxSeq) maxSeq = sq; } });
     // baza pozna tudi številke, ki jih je tablica rezervirala in še ne poslala (70_rezervacija_stevilk.sql)
     try { const r = await Promise.race([sb.rpc('app_prosta_stevilka', { p_leto: letos }), new Promise(ok => setTimeout(() => ok(null), 2500))]); if (r && typeof r.data === 'number' && r.data - 1 > maxSeq) maxSeq = r.data - 1; } catch (e) {}
+    if (zaprto()) return;
     const dnes = danes10();   // lokalni datum (UTC bi med 0. in 2. uro vrnil včeraj)
     const orgOpt = '<option value="">— izberi stranko —</option>' + ORGSEZNAM.map(o => `<option value="${o.id}">${escape_(o.name)}</option>`).join('');
     box.innerHTML = `<div class="ur-form">
@@ -5753,7 +5801,10 @@
       <div class="u-acts nl-akc"><div class="nl-sum"><b data-sum-kos>0 kos</b> · <output class="ur-kg-auto" data-teza-auto>—</output></div><button type="button" class="ur-save" data-shrani>Ustvari</button><button type="button" data-preklici>Prekliči</button></div>
       <p class="u-sub ur-msg" data-msg></p></div>`;
     const pBox = box.querySelector('[data-postavke]');
+    const obrazec = box.querySelector('.ur-form'), nalTrak = document.createElement('div');
+    nalTrak.innerHTML = NALAGANJE; box.insertBefore(nalTrak, obrazec); obrazec.style.display = 'none';
     await nalozArtSez(box);
+    if (zaprto()) return;
     function napolniPn(sel, curName) {
       var arts = box._arts || [];
       var matched = arts.some(function (a) { return a.name === curName; });
@@ -5811,9 +5862,7 @@
     vnosVrata(box);
     { const _os = box.querySelector('[data-org]'); if (_os) _os.addEventListener('change', async () => { await nalozArtSez(box); napolniPremade(); osveziKgPrikaz(box); }); }
     box.dataset.osnutek = '1';
-    if (gumb) gumb.classList.remove('nalaga');
-    if (_okno) return;
-    novListOkno(box);
+    nalTrak.remove(); obrazec.style.display = ''; box.style.minHeight = '';
   }
 
   // Vrstni red vnosa (nov spremni list): vrstica dobi zaporedno številko, ko ji prvič vpišeš količino;
@@ -5938,12 +5987,13 @@
       if (_okno && _okno.vsebina === box) {
         // Okno se skrči naravnost v kartico novega lista (če je v trenutnem filtru), sicer nazaj v gumb.
         const najdiNov = () => nid ? document.querySelector('#arhivList .a-row[data-id="' + String(nid).replace(/"/g, '\\"') + '"]') : null;
-        if (najdiNov()) {
+        if (najdiNov() && !$('sec-arhiv').classList.contains('hidden')) {
           _okno.najdi = najdiNov; _okno.id = String(nid);
           const prej = _okno.obZaprtju;
           _okno.obZaprtju = function (k) { prej(k); if (k) { k.classList.add('arh-flash'); setTimeout(function () { k.classList.remove('arh-flash'); }, 1700); } };
         }
         novListZapri(box, true);
+        if (!$('sec-domov').classList.contains('hidden')) risiPregled();   // ustvarjeno z Domova: ostane na Domovu
       } else {
         box.innerHTML = ''; box.classList.remove('show'); delete box.dataset.osnutek;
         pokaziList(nid);
@@ -6005,7 +6055,7 @@
       var _fp = $('fakPdfBtn'); if (_fp) _fp.addEventListener('click', () => fakIzvozModal('pdf'));
       risiFakture._wired = true;
     }
-    nalozifakture();
+    nalozifakture(true);
     _fakObdToggle();
   }
   // Privzeto obdobje Faktur = tekoči mesec (1. → danes). Gumb × ponastavi nanj.
@@ -6084,27 +6134,30 @@
     });
     return { skupine: skupine };
   }
-  async function nalozifakture() {
+  // tiho: ponovno odprtje zavihka — prejšnji izris ostane brez zatemnitve, isti podatki se ne izrišejo znova (sicer vse utripne)
+  async function nalozifakture(tiho) {
     const list = $('fakList');
     const od = $('fakOd').value, doo = $('fakDo').value, orgFilter = $('fakOrg').value;
-    if (!fakDatumOK(od, doo)) { list.innerHTML = '<div class="panel"><p class="u-sub">Datum »od« mora biti pred datumom »do«.</p></div>'; FAK_ZADNJI = null; return; }
+    if (!fakDatumOK(od, doo)) { list.innerHTML = '<div class="panel"><p class="u-sub">Datum »od« mora biti pred datumom »do«.</p></div>'; list._html = ''; FAK_ZADNJI = null; return; }
     // FAK_ZADNJI takoj razveljavimo: dokler se novo obdobje ne naloži, ne sme
     // nihče natisniti podatkov prejšnjega.
     FAK_ZADNJI = null;
     pokaziNalaganje(list);
     // Stare kartice zatemni le, če nalaganje traja opazno dlje. Prej so bile ob vsakem
     // odprtju zavihka za trenutek na 45 % — videti zamegljene, tudi ko je bilo nalaganje hipno.
-    const _zatemni = setTimeout(function () { list.style.opacity = '.45'; }, 350);
+    const _zatemni = tiho ? 0 : setTimeout(function () { list.style.opacity = '.45'; }, 350);
     const res = await fakZberi(od, doo, orgFilter ? [orgFilter] : null);
     clearTimeout(_zatemni);
     list.style.opacity = '';
-    if (res.error) { list.innerHTML = '<div class="panel"><p class="u-sub">Napaka: ' + escape_(res.error.message) + '</p></div>'; return; }
+    if (res.error) { list.innerHTML = '<div class="panel"><p class="u-sub">Napaka: ' + escape_(res.error.message) + '</p></div>'; list._html = ''; return; }
     const skupine = res.skupine;
     list.style.opacity = '';
     FAK_ZADNJI = { od, doo, skupine };
     $('fakPod').textContent = skupine.length ? '' : 'V izbranem obdobju ni spremnih listov';
-    if (!skupine.length) { list.innerHTML = '<div class="panel"><p class="u-sub">V izbranem obdobju ni spremnih listov.</p></div>'; return; }
-    list.innerHTML = '<div class="fak-grid">' + skupine.map((g, gi) => fakKartica(g, gi)).join('') + '</div>';
+    if (!skupine.length) { list.innerHTML = '<div class="panel"><p class="u-sub">V izbranem obdobju ni spremnih listov.</p></div>'; list._html = ''; return; }
+    const html = '<div class="fak-grid">' + skupine.map((g, gi) => fakKartica(g, gi)).join('') + '</div>';
+    if (list._html === html && list.firstElementChild && list.firstElementChild.classList.contains('fak-grid')) { oknoPoIzrisu(); return; }
+    list.innerHTML = html; list._html = html;
     list.dataset.loaded = '1';
     list.querySelectorAll('[data-fakprint]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); natisniFakturo(parseInt(b.dataset.fakprint, 10)); }));
     // Klik kjerkoli na kartici (ne le na napisu): prej je poslušala samo notranja vrstica z besedilom,
@@ -6359,7 +6412,6 @@
       postavke: items.map(function (p) { return { naziv: p.naziv, kosov: stevilo(p.kosov) }; }),
       kg: (n.weight_kg != null && n.weight_kg !== '') ? tezaFmt(n.weight_kg) : '',
       opomba: n.opomba_stranka || '',   // tiska se SAMO opomba za stranko (interna ostane v portalu)
-      popravek: n.popravljeno_at ? 'Popravljeno v portalu · ' + (n.popravil || 'osebje') + ' · ' + datum(String(n.popravljeno_at).slice(0, 10)) : ''
     });
   }
 
@@ -8419,7 +8471,7 @@
      Namestitveni paket leži poleg spletne različice, ne v kodi portala.
      Če ga še ni, to tu tudi piše — namesto strani 404. */
   // ?v= ob vsaki novi različici aplikacije (aplikacija/zgradi.py): brskalnik in predpomnilnik vzameta nov paket.
-  var APK_POT = 'tablica/Pralnica-sync.apk?v=11.10';
+  var APK_POT = 'tablica/Pralnica-sync.apk?v=11.12';
   var RFID_APK_POT = 'rfid/SmartClean-RFID.apk?v=1.7';   // aplikacija-rfid/zgradi.py (VERZIJA)
 
   function wirePwa(scope) {
@@ -10619,11 +10671,14 @@
     //    NIKOLI tihega vstopa (varnost). Face ID se sam NE izklopi (ne poteče) —
     //    izklopi se le ročno v Nastavitvah (»Odstrani s te naprave«).
     if (p && p.uid && bioPodprt() && bioVklopljen(p.uid)) {
-      var m = $('ppMsg'); if (m) { m.className = 'msg show'; m.innerHTML = '<span class="bio-pulse"></span>Odkleni ' + bioZ() + ' …'; }
+      // stanje v sami kartici: nič se ne premakne in nič ne pade pod rob zaslona
+      var kart = [].filter.call(document.querySelectorAll('#ppGrid .pp-tile[data-email]'), function (b) { return b.dataset.email === email; })[0];
+      var nm = kart && kart.querySelector('.pp-nm'), ime = nm ? nm.textContent : '';
+      var odklep = function (da) { if (!kart) return; kart.classList.toggle('odklepam', da); if (da) nm.innerHTML = '<span class="bio-pulse"></span>Odkleni ' + bioZ() + ' …'; else nm.textContent = ime; };
+      odklep(true);
       try {
         var ok = await bioOdkleni(p.uid, email);
-        if (!ok) { pokaziPrijavo(email); return; }
-        if (m) { m.className = 'msg'; m.textContent = ''; }
+        if (!ok) { odklep(false); pokaziPrijavo(email); return; }
         // Seja JE vzpostavljena (verifyOtp). Če izris aplikacije spodleti (prehodno),
         // NE vračaj na prijavo — seja je veljavna → osveži, obnovitev seje jo pobere.
         try { if (await start() === false) pokaziPrijavo(email, zagonSporocilo()); }
@@ -10634,7 +10689,7 @@
         var preklic = /NotAllowed|AbortError|abort|timed|timeout|cancel/i.test(((e && e.name) || '') + ' ' + ((e && e.message) || ''));
         // Preklic → tiho nazaj na izbirnik (spodaj je stalni gumb »Prijava z geslom«).
         // Prava napaka → naravnost na vpis gesla, prijazno.
-        if (m) { m.className = 'msg'; m.textContent = ''; }
+        odklep(false);
         if (!preklic) pokaziPrijavo(email, 'Poskusi znova ali vpiši geslo.');
         return;
       }

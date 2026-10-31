@@ -969,8 +969,7 @@ var DOK_CSS = "@page{size:A4;margin:0}" +
   "table.sc-table td.an{color:#0a0a0a;font-weight:600;text-align:left}" +
   "table.sc-table td.qty{text-align:center;font-weight:700;width:34%;color:#0a0a0a}" +
   ".sc-weight{margin-top:12px;font-size:12px;color:#0a0a0a;text-align:right;font-weight:600}" +
-  ".sc-note{margin-top:10px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;white-space:pre-wrap}" +
-  ".sc-popr{margin-top:10px;padding:6px 10px;border-radius:8px;background:#fdf3e8;color:#8a5a00;font-size:11px;font-weight:600}";
+  ".sc-note{margin-top:10px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;white-space:pre-wrap}";
 function dokGlavaHtml(){ return '<div class="sc-head"><div class="sc-wm">Smart<span>Clean</span></div><div class="sc-biz">' + DOK_BIZ.map(esc).join("<br>") + '</div></div>'; }
 function dokHtml(naslov, telesa){
   /* swap (ne block): tablica natisne/shrani ob »onPageFinished« — če bi pisava zamujala,
@@ -989,12 +988,10 @@ function listTelo(e){
   var prevoz = " &nbsp;·&nbsp; " + (e.prevoz === "izredni" ? "Izredni prevoz" : "Redni prevoz");
   var kg = (e.kg !== "" && e.kg != null && Number(e.kg) > 0) ? '<div class="sc-weight">Skupaj teža perila: <b>' + tezaFmt(e.kg) + '</b></div>' : "";
   var opomba = e.opombaStranka ? '<div class="sc-note"><b>Opomba:</b> ' + esc(e.opombaStranka) + '</div>' : "";   // interna opomba se NE tiska
-  var popAt = e.portalPopravljenoAt || e.popravljeno_at;
-  var popr = popAt ? '<div class="sc-popr">Popravljeno v portalu · ' + esc(e.popravil || "osebje") + ' · ' + fmtDateHuman(String(popAt).slice(0, 10)) + '</div>' : "";
   return '<div class="sc-box sc-num"><span>Št. spremnega lista: <b>' + esc(e.stevilka) + '</b></span></div>' +
     '<div class="sc-box sc-client"><div class="cl"><div><b>Naročnik storitve:</b> <span class="cname">' + esc(naziv) + '</span>' + (nazivSek ? ' <span class="cname-sec">(' + esc(nazivSek) + ')</span>' : '') + '</div>' +
     '<div class="sc-dates">Oddaja: ' + fmtDateHuman(e.datum) + izdal + prevoz + '</div></div><div class="sc-sign">Podpis:</div></div>' +
-    '<table class="sc-table"><thead><tr><th class="l">Naziv artikla</th><th>Oddaja (št. kosov)</th></tr></thead><tbody>' + rows + '</tbody></table>' + kg + opomba + popr;
+    '<table class="sc-table"><thead><tr><th class="l">Naziv artikla</th><th>Oddaja (št. kosov)</th></tr></thead><tbody>' + rows + '</tbody></table>' + kg + opomba;
 }
 function dokZaListe(arr, izvodov){
   var t = []; arr.forEach(function(e){ for(var i = 0; i < izvodov; i++) t.push(listTelo(e)); });
@@ -1070,7 +1067,6 @@ function naloziPdf(){
   return _pdfMod;
 }
 function pdfPodatki(e){
-  var popAt = e.portalPopravljenoAt || e.popravljeno_at;
   return {
     stevilka: e.stevilka,
     naziv: e.strankaPodjetje || e.strankaNaziv || "—",
@@ -1079,7 +1075,6 @@ function pdfPodatki(e){
     postavke: (e.postavke || []).map(function(p){ return { naziv: p.naziv, kosov: stevilo(p.kosov) }; }),
     kg: (e.kg !== "" && e.kg != null && Number(e.kg) > 0) ? tezaFmt(e.kg) : "",
     opomba: e.opombaStranka || "",   /* interna opomba se NE tiska */
-    popravek: popAt ? "Popravljeno v portalu · " + (e.popravil || "osebje") + " · " + fmtDateHuman(String(popAt).slice(0, 10)) : ""
   };
 }
 /* PDF enega lista v 1 ali 2 izvodih (vsak izvod svoja stran), kot natisne tablica */

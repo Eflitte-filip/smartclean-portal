@@ -5,25 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
 <title>SmartClean Portal</title>
 <!-- Tema pred prvim izrisom + zagonski zaslon (zunanja datoteka — CSP dovoli le 'self'). -->
-<script src="boot.js?v=4.90"></script>
+<script src="boot.js?v=4.91"></script>
 <!-- Pisava logotipa takoj (vzporedno s CSS), da se logotip na zagonskem zaslonu ne izriše najprej v nadomestni pisavi. -->
 <link rel="preload" href="fonts/playfair-display-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin/>
 <!-- Zagonski zaslon (splash): pokrije nalaganje in se gladko pretopi v portal. -->
 <style>
 html.sc-booting,html.sc-booting body{overflow:hidden!important;overscroll-behavior:none;}
-#scBoot{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#0a0a0a;transition:opacity .5s ease;-webkit-tap-highlight-color:transparent;overflow:hidden;}
+#scBoot{position:fixed;inset:0;z-index:99999;background:#0a0a0a;transition:opacity .5s ease;-webkit-tap-highlight-color:transparent;overflow:hidden;}
 :root[data-theme="light"] #scBoot{background:#ffffff;}
 #scBoot.scBoot-hide{opacity:0;pointer-events:none;}
-#scBoot .scBoot-in{display:flex;flex-direction:column;align-items:center;gap:20px;animation:scBootIn .6s cubic-bezier(.22,.61,.36,1) both;}
+/* Logotip natanko na sredini, trak visi pod njim in sredine ne premika. iPhone: 100lvh sega pod Safarijevo spodnjo vrstico, zato je to sredina zaslona, ne le vidnega dela strani. */
+#scBoot .scBoot-in{position:absolute;left:0;right:0;top:50%;height:0;display:flex;align-items:center;justify-content:center;animation:scBootIn .6s cubic-bezier(.22,.61,.36,1) both;}
+@supports(-webkit-touch-callout:none){#scBoot .scBoot-in{top:50lvh;}}
 /* Logotip = isti razred .wordmark kot v zgornjem levem kotu portala (pisava, velikost, barve iz portal.css). */
-#scBoot .scBoot-bar{width:132px;height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden;}
+#scBoot .scBoot-bar{position:absolute;left:50%;top:32px;width:132px;margin-left:-66px;height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden;}
 :root[data-theme="light"] #scBoot .scBoot-bar{background:rgba(10,10,10,.10);}
 /* Trak pove, da aplikacija dela (ni okras): !important, da teče tudi ob »Zmanjšaj gibanje« in v načinu Varčno; odsek je vedno vsaj delno viden. */
 #scBoot .scBoot-bar i{display:block;height:100%;width:40%;border-radius:3px;background:#6ed3a1;animation:scBootBar 1.2s cubic-bezier(.45,.05,.55,.95) -.3s infinite!important;}
 :root[data-theme="light"] #scBoot .scBoot-bar i{background:#1a6644;}
 @keyframes scBootIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes scBootBar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
-@media(prefers-reduced-motion:reduce){#scBoot .scBoot-in{animation:none}}
+@media(prefers-reduced-motion:reduce){html:not(.zm-polno) #scBoot .scBoot-in{animation:none}}
 /* iOS 26/27, aplikacija na začetnem zaslonu: sistem vzame barvo s pritrjenega elementa na vrhu strani.
    Ko se ta element PRVIČ zamenja (npr. zagonski zaslon → zgornja vrstica), vrh do zaprtja aplikacije
    zamegljuje in tega ni mogoče več popraviti. Zato EN trak, od prvega izrisa nad vsem in nikoli
@@ -51,7 +53,7 @@ html.sc-sam.sc-pod-uro[data-theme="light"] #sc-vrh{background:#0a0a0a;}
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=4"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0a0a'/%3E%3Ctext x='32' y='42' font-family='Georgia,%27Times New Roman%27,serif' font-size='36' font-weight='700' text-anchor='middle'%3E%3Ctspan fill='%23e8f1eb'%3ES%3C/tspan%3E%3Ctspan fill='%236ed3a1'%3EC%3C/tspan%3E%3C/text%3E%3C/svg%3E"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://anrhtgbckxrccnafcmsz.supabase.co; connect-src 'self' https://anrhtgbckxrccnafcmsz.supabase.co wss://anrhtgbckxrccnafcmsz.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none'"/>
-<link rel="stylesheet" href="portal.css?v=4.90"/>
+<link rel="stylesheet" href="portal.css?v=4.91"/>
 <style id="hexfx">
 .sc-hex{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:1}
 .auth,.app{position:relative;z-index:1}
@@ -110,7 +112,7 @@ html[data-theme="light"] .sc-hex{opacity:.5}
 .sc-hex{transition:opacity .6s ease,visibility 0s linear 0s}
 body:has(> .app.show) .sc-hex{opacity:0;visibility:hidden;transition:opacity .6s ease,visibility 0s linear .6s}
 body:has(> .app.show) .sc-hex [class*="hw"]{animation-play-state:paused}
-@media (prefers-reduced-motion:reduce){.sc-hex [class*="hw"]{animation:none;opacity:0}}
+@media (prefers-reduced-motion:reduce){html:not(.zm-polno) .sc-hex [class*="hw"]{animation:none;opacity:0}}
 </style>
 </head>
 <body>
@@ -598,10 +600,10 @@ body:has(> .app.show) .sc-hex [class*="hw"]{animation-play-state:paused}
 </div>
 <!-- logotip eflitte: ena pot, uporabljen na prijavi in v meniju (barva besedila, kot na eflitte.si) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="efLogo" viewBox="0 0 437.86 136.56"><path fill-rule="evenodd" fill="currentColor" d="M122.79 31.88C120.72 32.18 117.61 31.38 115.87 32.51L108.79 51.79C109.91 52.88 111.83 52.52 113.29 52.48L114.88 52.51C115.27 54.00 114.04 55.58 113.51 57.01L108.48 70.51L91.97 115.01L84.79 134.62C87.12 135.82 91.19 135.03 93.79 135.03L116.79 134.90L147.79 52.86C150.27 51.96 153.62 52.48 156.29 52.50L160.21 52.01L162.48 46.51L165.52 38.51L167.52 32.51C166.70 31.75 165.35 32.06 164.29 32.07C161.83 32.07 157.97 32.82 155.82 31.51C157.62 27.47 157.88 22.76 162.79 21.20L172.79 20.64L180.22 0.51C179.36 -0.33 177.44 0.00 176.29 0.00L165.79 0.00C151.99 -0.01 137.23 4.27 129.55 16.51L125.52 25.01L122.79 31.88Z M184.89 0.51L167.97 46.01L147.04 102.01L139.13 123.01L135.06 134.51C135.79 135.28 136.81 135.03 137.79 135.03L143.29 135.03L166.79 135.00C168.47 133.35 168.68 130.64 169.45 128.51L171.65 123.01L181.46 96.51L217.24 0.51C215.76 -0.77 211.68 0.00 209.79 0.00L191.79 0.00C189.86 0.01 186.52 -0.66 184.89 0.51Z M227.79 0.07L225.86 4.01L221.29 16.16C220.99 17.32 219.28 20.14 219.79 21.04C221.13 22.42 225.35 21.04 227.29 21.00L252.79 18.34L255.46 11.51C256.84 7.92 258.76 4.32 259.48 0.51L256.79 0.00L251.29 0.00L227.79 0.07Z M273.27 5.01L264.79 25.88L255.96 26.51L250.10 41.51C249.77 42.55 248.21 45.23 248.79 46.05C250.44 47.00 252.92 46.53 254.79 46.52L256.81 46.51C257.38 48.40 255.36 52.18 254.51 54.01L248.54 70.01L224.51 134.51L226.79 135.03L232.29 135.03L256.79 134.83L289.79 46.96C291.93 46.04 294.96 46.50 297.29 46.51C298.77 46.52 300.04 46.75 300.79 45.23L302.79 46.54L309.82 46.51C310.50 48.10 309.04 50.45 308.44 52.01L303.56 65.01L285.04 115.01L277.79 134.64L287.29 135.03L309.79 134.91L343.08 47.01C344.73 45.82 348.32 46.52 350.29 46.52L352.79 46.51C354.71 45.13 354.65 42.55 355.59 40.51L358.56 32.51C359.38 30.57 360.51 28.73 360.52 26.51C359.16 25.43 355.50 26.12 353.79 26.12L351.16 25.51L358.29 5.33C357.45 3.78 352.89 4.52 351.29 4.54L333.29 4.53C331.53 4.53 327.72 3.84 326.36 5.01L320.41 20.01L317.79 25.95L311.79 26.12L309.20 26.51C308.00 28.12 307.69 29.70 307.06 31.51L303.41 40.51C302.81 41.72 302.74 44.99 301.29 45.43C300.83 43.80 302.26 40.70 303.29 39.88L303.79 37.19L304.70 34.51C305.74 32.16 307.57 29.29 307.33 26.51L304.79 26.12C302.80 26.12 299.59 26.73 297.92 25.51L303.53 10.01C303.92 8.68 305.63 6.29 305.03 5.01L302.79 4.53L297.29 4.53L273.79 4.62L273.27 5.01Z M87.79 93.61L85.79 93.19L80.29 93.19L62.79 93.19C60.64 93.19 57.62 92.61 55.79 93.87L53.05 101.01C51.30 104.62 49.52 109.70 45.79 111.84C44.14 112.78 42.63 113.04 40.79 113.38L37.29 113.30C35.75 113.02 34.94 112.69 33.79 111.65C32.49 110.11 33.40 107.20 33.82 105.51C35.08 100.41 36.85 95.22 39.09 90.51L40.79 86.27L90.79 86.10L92.67 82.01L97.55 68.51C100.26 61.38 103.37 54.36 103.52 46.51C103.58 43.56 103.39 40.22 102.10 37.51C100.67 34.53 98.72 32.31 96.29 30.09L88.79 26.21L80.79 24.83C75.51 24.14 70.07 23.34 64.79 24.69L60.79 24.97C57.39 25.39 53.91 26.52 50.79 27.72L44.29 30.19C37.82 33.83 30.93 38.33 26.51 44.51C18.05 56.35 14.13 70.10 9.14 83.51C6.20 91.39 2.57 99.15 1.00 107.51C0.36 110.89 -0.07 114.03 0.16 117.51L0.41 121.01C1.33 123.59 2.31 126.60 4.29 128.60C10.17 134.56 19.15 136.39 27.29 136.53C39.65 136.73 52.63 135.38 63.29 128.71C68.04 125.73 71.58 121.93 75.51 118.01C80.26 113.29 82.96 106.50 85.59 100.51C86.38 98.72 88.59 95.54 87.79 93.61Z M422.00 93.51L390.52 93.51C388.59 95.64 388.21 98.93 387.10 101.51C384.72 107.06 381.65 112.27 375.29 113.32C372.40 113.80 369.46 113.50 367.64 111.01C366.77 109.10 367.76 107.36 368.11 105.51C368.99 100.92 371.30 96.99 372.40 92.51L374.79 86.51L425.29 85.88L432.56 66.51C434.98 60.61 437.19 54.46 437.72 48.01C437.94 45.44 438.07 41.96 437.09 39.51L434.02 33.51C432.70 31.48 430.32 29.94 428.29 28.72L422.79 26.16L411.79 24.10C407.47 23.76 402.99 23.87 398.79 24.74L388.79 26.26C383.99 27.97 379.26 29.71 374.79 32.18C367.80 36.04 361.43 42.73 357.30 49.51C351.22 59.49 348.41 70.78 344.13 81.51C340.70 90.15 336.97 98.86 335.12 108.01C334.37 111.70 333.38 116.70 334.45 120.51C335.23 123.29 336.56 126.28 338.41 128.51C343.71 134.91 354.02 136.33 361.79 136.52C376.34 136.87 389.83 134.20 401.79 125.76C406.00 122.79 409.33 118.59 412.33 114.51C415.73 109.90 418.72 104.50 420.47 99.01C421.05 97.19 422.60 95.51 422.00 93.51Z M215.79 32.58C213.51 34.85 213.17 38.62 212.00 41.51L203.02 65.51L177.14 134.51L179.29 135.03L184.79 135.03L209.29 134.75L219.54 107.51L237.52 59.51L243.51 43.51C245.76 38.02 248.46 32.37 249.68 26.51C248.28 25.67 247.16 26.52 245.79 26.85L241.29 27.78L215.79 32.58Z M48.79 64.69C49.93 65.48 51.45 65.18 52.79 65.17L62.29 65.17L66.29 64.92L67.76 61.51C69.21 58.35 72.10 51.81 69.78 48.51C68.66 47.50 67.73 47.15 66.29 46.81C60.79 45.50 56.12 49.25 53.30 53.51L51.09 58.51L48.79 64.69Z M383.29 64.89L387.79 65.17L400.79 64.83L402.33 60.51C403.27 57.25 406.76 51.34 403.79 48.22L400.79 46.86C393.52 45.14 388.98 50.90 386.15 56.51L383.79 62.20L383.29 64.89Z"/></symbol></svg>
-<script defer src="start.js?v=4.90"></script>
+<script defer src="start.js?v=4.91"></script>
 <script defer src="config.js"></script>
-<script defer src="supabase.js?v=4.90"></script>
+<script defer src="supabase.js?v=4.91"></script>
 <!-- pdfgen.js se naloži šele ob prvi izdelavi PDF-ja (glej zagotoviPdf() v portal.js). -->
-<script defer src="portal.js?v=4.90"></script>
+<script defer src="portal.js?v=4.91"></script>
 </body>
 </html>

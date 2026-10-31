@@ -1,5 +1,18 @@
 [
  {
+  "v": "4.91",
+  "d": "2026-10-31",
+  "c": "2026-10-31T22:26:00+01:00",
+  "t": [
+   "Prehodi na novo: razdelki, okna, meni, potrditve, zavihki in gumbi imajo eno, mehkejše gibanje. V načinu Zmogljivo teče tudi, če je na napravi vklopljeno Zmanjšaj gibanje.",
+   "Gumb + na Domovu takoj odpre nov spremni list, brez preklopa na Spremne liste. Po shranjevanju ostanete na Domovu.",
+   "Fakture ob ponovnem odprtju ne utripnejo več.",
+   "Logotip na zagonskem zaslonu je na sredini zaslona, tudi v Safariju na iPhonu.",
+   "Prijava: po prijavi se takoj pokaže nalagalni trak. Odklepanje s Face ID je prikazano v kartici profila in se ne prekriva več s Prijavo z geslom.",
+   "Popravljen spremni list nima več oznake o popravku: ne v PDF-ju, ne pri tisku, ne pri stranki, tudi ne v aplikaciji za spremne liste (11.12)."
+  ]
+ },
+ {
   "v": "4.90",
   "d": "2026-10-31",
   "c": "2026-10-31T21:26:00+01:00",
