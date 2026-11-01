@@ -13,8 +13,12 @@
 
   // 1b) Aplikacija z začetnega zaslona: trajen trak na vrhu (#sc-vrh, glej index.html) — pred prvim izrisom.
   try {
-    if (window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches))
+    if (window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)) {
       document.documentElement.classList.add('sc-sam');
+      // Stran se začne pod uro, zato sredina zaslona ni sredina strani. lvh in vh se med zagonom še spremenita (812 → 874), innerHeight in screen ne.
+      var vis = (innerWidth > innerHeight ? Math.min : Math.max)(screen.width, screen.height);
+      if (vis >= innerHeight && vis - innerHeight < 120) document.documentElement.style.setProperty('--sc-sredina', (innerHeight - vis / 2) + 'px');
+    }
   } catch (e) {}
 
   // 1c) Zmogljivo: gibanje ostane tudi ob sistemski »Zmanjšaj gibanje« — že od prvega izrisa.

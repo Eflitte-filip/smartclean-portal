@@ -3195,7 +3195,7 @@ html.v5:not(.sc-sam) .auth::after{bottom:0;}
 .v5 .profile-picker h1{font-family:var(--sans);font-size:clamp(1.9rem,2.4vw,2.4rem);font-weight:500;letter-spacing:-.03em;}
 @media(max-width:900px){
   .v5 .auth-main{display:flex;flex-direction:column;align-items:stretch;gap:28px;padding:4px 16px 20px;}
-  .v5 .auth-hero{min-height:0;height:clamp(150px,26vh,230px);flex:none;padding:22px 24px;border-radius:24px;max-height:none;transition:height .3s ease,opacity .3s ease,margin .3s ease;}
+  .v5 .auth-hero{min-height:0;height:clamp(150px,26vh,230px);height:clamp(150px,26svh,230px);flex:none;padding:22px 24px;border-radius:24px;max-height:none;transition:height .3s ease,opacity .3s ease,margin .3s ease;}
   .v5 .auth-claim{font-size:clamp(1.9rem,8.4vw,2.6rem);max-width:14ch;}
   .v5 .auth-slot{max-width:460px;align-self:center;}
   .v5 #auth.auth-tipk .auth-hero{height:0;padding-top:0;padding-bottom:0;opacity:0;margin-bottom:-28px;}
