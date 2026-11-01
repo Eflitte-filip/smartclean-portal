@@ -3624,6 +3624,7 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
   .v5 .okno-back.okno-cel .okno-zatemni{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;transition:none;}
   .v5 .okno{width:100%;height:calc(100dvh - var(--vrh));max-height:none;border:0;border-radius:0;box-shadow:none;background:var(--bg);}
   .v5 .okno-telo{padding-bottom:env(safe-area-inset-bottom);}
+  .v5 .okno .u-acts.nl-akc{background:var(--bg);}   /* okno je na telefonu v barvi strani, ne površine */
   .v5 .okno-pasica{display:block;}
   .v5 .okno-nazaj{display:flex;}
   .v5 .okno-x,.v5 .okno-nazaj{position:absolute;top:10px;z-index:3;width:40px;height:40px;align-items:center;justify-content:center;padding:0;border:0;border-radius:50%;

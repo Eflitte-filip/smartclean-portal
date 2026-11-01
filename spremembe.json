@@ -1,5 +1,14 @@
 [
  {
+  "v": "4.92",
+  "d": "2026-11-01",
+  "c": "2026-11-01T14:19:00+01:00",
+  "t": [
+   "Zagonski zaslon: logotip je na sredini zaslona tudi v aplikaciji z začetnega zaslona na iPhonu.",
+   "Nov spremni list na telefonu: spodnja vrstica z gumbi ima v temni temi isto ozadje kot okno."
+  ]
+ },
+ {
   "v": "4.91",
   "d": "2026-10-31",
   "c": "2026-10-31T22:26:00+01:00",
