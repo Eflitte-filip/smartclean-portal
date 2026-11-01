@@ -30,7 +30,7 @@
   // 2) Med splashem zakleni pomikanje strani.
   try { document.documentElement.classList.add('sc-booting'); } catch (e) {}
 
-  // 3) Umik splasha — kliče ga portal.js, ko je portal pripravljen; varovalo po 6 s.
+  // 3) Umik splasha — kliče ga portal.js, ko je portal pripravljen; varovalo po 6 s, ko je stran naložena.
   window.scBootDone = function () {
     try { document.documentElement.classList.remove('sc-booting'); } catch (e) {}
     var b = document.getElementById('scBoot');
@@ -39,7 +39,13 @@
     b.classList.add('scBoot-hide');
     b.__t = setTimeout(function () { if (b && b.parentNode) b.parentNode.removeChild(b); }, 560);
   };
-  setTimeout(function () { try { window.scBootDone(); } catch (e) {} }, 6000);
+  // Med nalaganjem datotek (počasna povezava) ostane; če se portal ne zažene, ga po 30 s umakne.
+  var zacetek = Date.now();
+  function varuj() {
+    if (document.readyState === 'complete' || Date.now() - zacetek > 30000) { try { window.scBootDone(); } catch (e) {} return; }
+    setTimeout(varuj, 500);
+  }
+  setTimeout(varuj, 6000);
 
   // 4) Po prijavi: isti zaslon z nalagalnim trakom se pretopi čez prijavo in ostane, dokler portal ni sestavljen
   //    (scBootDone ga umakne; varovalo po 12 s). Vrne true, če je bil prikazan na novo.

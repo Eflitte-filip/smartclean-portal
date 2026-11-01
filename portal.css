@@ -3698,7 +3698,7 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
 .v5 .sec.sec-anim > :nth-child(n+3){animation-delay:.08s;}
 .v5 .sec.sec-anim > :has(> :is(.rows,.fak-grid,.art-skupine)){animation:none;}
 .v5 #sec-cipi.sec-anim > #cipiVsebina{animation-name:gibPojav;}   /* vrstica z gumbi je pritrjena: premik starša bi jo za trenutek zamaknil */
-.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > *{animation:gibKartica var(--gib-t4) var(--gib) backwards;animation-delay:calc(.07s + var(--gib-i,12) * 24ms);}
+.v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > *{animation:gibKartica var(--gib-t4) var(--gib) backwards;animation-delay:calc(.07s + var(--gib-i,12) * 24ms - var(--gib-tek,0ms));}
 .v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(1){--gib-i:0;}
 .v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(2){--gib-i:1;}
 .v5 .sec.sec-anim :is(.rows,.fak-grid,.art-skupine) > :nth-child(3){--gib-i:2;}

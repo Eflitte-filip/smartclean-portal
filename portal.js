@@ -804,7 +804,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '4.93 · BETA';
+  var APP_VERZIJA = '4.94 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -1585,12 +1585,37 @@
     return /^[a-z]+$/.test(h) && document.getElementById('sec-' + h) ? h : 'domov';
   }
   var _secZdaj = null;
+  var GIB_SEZNAMI = '.rows,.fak-grid,.art-skupine';
+  // Razdelek pokaže kartice prejšnjega obiska in jih izriše znova, ko pridejo sveži podatki. Nove kartice zato ne začnejo vala
+  // od začetka (dvojna animacija), ampak tam, kjer je bil (--gib-tek). Če kartic še ni (nalagalni trak), se val začne ob prvem izrisu.
   function secVstop(el, smer) {
-    var vsi = ['sec-anim', 'sec-levo', 'sec-desno', 'sec-pogled'];
-    el.classList.remove.apply(el.classList, vsi); void el.offsetWidth;
+    if (el._gibKonec) el._gibKonec();
+    void el.offsetWidth;
     el.classList.add('sec-anim'); if (smer) el.classList.add(smer);
-    clearTimeout(el._gibUra);   // razred mora iti, sicer bi se vsak kasnejši izris seznama znova animiral
-    el._gibUra = setTimeout(function () { el.classList.remove.apply(el.classList, vsi); }, 1000);
+    var polni = function (s) { return s.children.length > 0; };
+    var t0 = [].some.call(el.querySelectorAll(GIB_SEZNAMI), polni) ? performance.now() : 0, ura;
+    var mo = new MutationObserver(function (zapisi) {
+      var novi = [];
+      zapisi.forEach(function (z) {
+        [].forEach.call(z.addedNodes, function (n) {
+          if (n.nodeType !== 1) return;
+          if (n.matches(GIB_SEZNAMI)) novi.push(n);
+          else if (z.target.matches(GIB_SEZNAMI)) novi.push(z.target);
+          else novi.push.apply(novi, n.querySelectorAll(GIB_SEZNAMI));
+        });
+      });
+      novi = novi.filter(polni); if (!novi.length) return;
+      if (!t0) { t0 = performance.now(); clearTimeout(ura); ura = setTimeout(konec, 1000); return; }
+      var tek = Math.round(performance.now() - t0) + 'ms';
+      novi.forEach(function (s) { s.style.setProperty('--gib-tek', tek); });
+    });
+    var konec = el._gibKonec = function () {   // razred mora iti, sicer bi se vsak kasnejši izris seznama znova animiral
+      clearTimeout(ura); mo.disconnect(); el._gibKonec = null;
+      el.classList.remove('sec-anim', 'sec-levo', 'sec-desno', 'sec-pogled');
+      el.querySelectorAll('[style*="--gib-tek"]').forEach(function (s) { s.style.removeProperty('--gib-tek'); });
+    };
+    mo.observe(el, { childList: true, subtree: true });
+    ura = setTimeout(konec, t0 ? 1000 : 6000);
   }
   function pojdi(kam) {
     if (_okno) oknoZapri(true);
@@ -3835,12 +3860,24 @@
       el.addEventListener('click', function () { poudari(root.querySelector('[data-i="' + el.dataset.i + '"].on.uc-krog-s') && el.classList.contains('uc-krog-s') ? null : el.dataset.i); });
     });
     var reduce = manjGibanja();
-    if (animiraj && !reduce) {   // krog se izriše v smeri urinega kazalca, seznam se pojavi za njim
+    if (_ucKrogIo) { _ucKrogIo.disconnect(); _ucKrogIo = null; }
+    // osvežitev, ko krog še čaka na vstop, ga ne sme pokazati končanega
+    if ((animiraj || _ucKrogCaka) && !reduce) {   // krog se izriše v smeri urinega kazalca, seznam se pojavi za njim
       var m = root.querySelector('.uc-krog-maska'), C = parseFloat(m.style.strokeDasharray);
       m.style.strokeDashoffset = C; root.classList.add('vstop');
-      requestAnimationFrame(function () { requestAnimationFrame(function () { m.style.transition = 'stroke-dashoffset .9s cubic-bezier(.22,.61,.36,1)'; m.style.strokeDashoffset = 0; root.classList.remove('vstop'); }); });
+      var zacni = function () {
+        _ucKrogCaka = false; _uc3dMirno = Date.now() + 1000;   // osvežitev s svežimi podatki počaka konec animacije (ucPoAnimaciji)
+        requestAnimationFrame(function () { requestAnimationFrame(function () { m.style.transition = 'stroke-dashoffset .9s cubic-bezier(.22,.61,.36,1)'; m.style.strokeDashoffset = 0; root.classList.remove('vstop'); }); });
+      };
+      if (!window.IntersectionObserver) { zacni(); return; }
+      // krog je lahko pod robom zaslona: brez čakanja bi se animiral neviden in uporabnik bi ga videl že končanega
+      _ucKrogCaka = true;
+      _ucKrogIo = new IntersectionObserver(function (v, io) { if (!v[v.length - 1].isIntersecting) return; io.disconnect(); _ucKrogIo = null; zacni(); }, { threshold: .35 });
+      _ucKrogIo.observe(root);
     }
   }
+  var _ucKrogIo = null, _ucKrogCaka = false;
+  window.addEventListener('beforeprint', function () { var m = document.querySelector('.uc-krog.vstop .uc-krog-maska'); if (m) { m.style.strokeDashoffset = 0; m.closest('.uc-krog').classList.remove('vstop'); } });
   function uc3dAnimate(stage, range, animate) { var d = ucDonutSegs(range); stage.innerHTML = ucKrogHtml(d); ucKrogPovezi(stage, d, animate); }
   function uc3dTween(stage, from, to) { stage.innerHTML = ucKrogHtml(to); ucKrogPovezi(stage, to, true); }
   // Odtis podatkov Statistike: ali se je po osvežitvi v ozadju kaj spremenilo.
@@ -3862,7 +3899,7 @@
   function ucPoAnimaciji(fn) {
     var t0 = Date.now();
     (function cakaj() {
-      if ((_uc3dRAF || Date.now() < _uc3dMirno) && Date.now() - t0 < 8000) { setTimeout(cakaj, 120); return; }
+      if ((_uc3dRAF || _ucKrogCaka || Date.now() < _uc3dMirno) && Date.now() - t0 < 8000) { setTimeout(cakaj, 120); return; }
       fn();
     })();
   }
@@ -9257,16 +9294,17 @@
      Oddaja / Prevzem: skeniraš vse naenkrat (lahko več strank); portal kose razvrsti po strankah, Potrdi jih
      zabeleži in pri oddaji vsaki stranki sam ustvari spremni list (rfid_potrdi — ena transakcija, ključ
      potrditve prepreči dvojne liste). Označi: čipi izbrane stranke dobijo artikel. Kosi: pregled stranke.
+     V portalu sta od 4.94 le Evidenca (kosi) in Označi: oddajo in prevzem skenira aplikacija na C72.
      Skeniranje se hrani na napravi — osvežitev strani ga ne izgubi. */
-  var RF = { org: null, nacin: 'oddaja', idx: {}, vprasan: {}, sken: [], skenSet: {}, kljuc: null, art: '', arts: [], kosi: null, gen: 0, rezultat: null,
+  var RF = { org: null, nacin: 'kosi', idx: {}, vprasan: {}, sken: [], skenSet: {}, kljuc: null, art: '', arts: [], kosi: null, gen: 0, rezultat: null,
     izlocene: {}, vkl: { prest: false, drugje: false }, isciGen: 0, isciNapake: 0, oznacujem: false, potrjujem: false };
   try {
     RF.org = localStorage.getItem('sc-rfid-org') || null;
-    var _rfn = localStorage.getItem('sc-rfid-nacin'); if (['oddaja', 'prevzem', 'oznaci', 'kosi'].indexOf(_rfn) >= 0) RF.nacin = _rfn;
+    var _rfn = localStorage.getItem('sc-rfid-nacin'); if (['oznaci', 'kosi'].indexOf(_rfn) >= 0) RF.nacin = _rfn;
     var _rfs = JSON.parse(localStorage.getItem('sc-rfid-sken') || 'null');
     if (_rfs && Array.isArray(_rfs.sken)) { RF.sken = _rfs.sken.filter(function (e) { return /^[0-9A-F]{8,64}$/.test(e); }); RF.kljuc = _rfs.kljuc || null; RF.sken.forEach(function (e) { RF.skenSet[e] = 1; }); if (_rfs.izlocene) RF.izlocene = _rfs.izlocene; }
   } catch (e) {}
-  var RF_NACINI = [['oddaja', 'Oddaja'], ['prevzem', 'Prevzem'], ['oznaci', 'Označi'], ['kosi', 'Kosi']];
+  var RF_NACINI = [['kosi', 'Evidenca'], ['oznaci', 'Označi']];
   var RF_PRALNICA_DNI = 3, RF_NEVIDEN_DNI = 45;   // pogrešan: v pralnici dlje kot 3 dni ali 45 dni brez skeniranja
 
   function rfEpc(s) { var e = String(s || '').replace(/[^0-9A-Fa-f]/g, '').toUpperCase(); return /^[0-9A-F]{8,64}$/.test(e) ? e : null; }

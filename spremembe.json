@@ -1,5 +1,16 @@
 [
  {
+  "v": "4.94",
+  "d": "2026-11-01",
+  "c": "2026-11-01T15:07:00+01:00",
+  "t": [
+   "Zagon: logotip in nalagalni trak se pokažeta takoj, tudi kadar se stran nalaga počasi, in ne več šele po belem zaslonu.",
+   "Razdelki se ob odprtju animirajo enkrat, tudi ko med animacijo pridejo sveži podatki (npr. Cenik & artikli).",
+   "Statistika: krog se nariše, ko je na zaslonu, tudi če je pod robom zaslona.",
+   "Čipi: v portalu sta Evidenca in Označi. Oddajo in prevzem skenira aplikacija na C72."
+  ]
+ },
+ {
   "v": "4.93",
   "d": "2026-11-01",
   "c": "2026-11-01T14:34:00+01:00",
