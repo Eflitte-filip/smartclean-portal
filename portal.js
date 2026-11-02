@@ -804,7 +804,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '4.94 · BETA';
+  var APP_VERZIJA = '4.95 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -4500,11 +4500,13 @@
     var x = document.createElement('button'); x.type = 'button'; x.className = 'doc-x okno-x'; x.setAttribute('aria-label', 'Zapri'); x.innerHTML = IKO_ZAPRI;
     // telefon: Nazaj levo (iz urejanja na podrobnosti, sicer zapre), × desno
     var nz = document.createElement('button'); nz.type = 'button'; nz.className = 'doc-x okno-nazaj'; nz.setAttribute('aria-label', 'Nazaj'); nz.innerHTML = IKO_NAZAJ;
-    nz.addEventListener('click', function () { var p = telo.querySelector('[data-preklici]'); if (p && p.offsetParent) p.click(); else oknoZapri(); });
+    nz.addEventListener('click', function () { var p = telo.querySelector('[data-preklici]'); if (p && p.offsetParent) p.click(); else oknoKoncaj(); });
     notr.appendChild(glava); notr.appendChild(telo); panel.appendChild(notr); back.appendChild(panel);
     var o = _okno = { back: back, panel: panel, notr: notr, glava: glava, telo: telo, x: x, nz: nz, kartica: kartica, vsebina: vsebina, najdi: najdi,
       id: kartica.dataset.id, dom: { parent: vsebina.parentNode, next: vsebina.nextSibling, id: vsebina.id },
-      glavaFn: moznosti.glava || null, obZaprtju: moznosti.obZaprtju || null, osvezi: moznosti.osvezi || null };
+      glavaFn: moznosti.glava || null, obZaprtju: moznosti.obZaprtju || null, osvezi: moznosti.osvezi || null,
+      varuj: moznosti.varuj || null, zavrzi: moznosti.zavrzi || null, odtis: null };
+    if (o.varuj) o.odtis = oknoOdtis(o);
     oknoGlava();
     vsebina.removeAttribute('id');   // po ponovnem izrisu ima nova kartica element z istim id-jem
     vsebina.classList.add('show');
@@ -4514,10 +4516,10 @@
     document.documentElement.classList.add('okno-zaklep');
     if (drsnik > 0) document.documentElement.style.paddingRight = drsnik + 'px';
     document.body.appendChild(back);
-    x.addEventListener('click', function () { oknoZapri(); });
+    x.addEventListener('click', function () { oknoKoncaj(); });
     // Zapri ob kliku na ozadje — a ne, če se je izbira besedila začela v oknu in končala zunaj.
     back.addEventListener('mousedown', function (e) { o.zunaj = e.target === back; });
-    back.addEventListener('click', function (e) { if (e.target === back && o.zunaj) oknoZapri(); o.zunaj = false; });
+    back.addEventListener('click', function (e) { if (e.target === back && o.zunaj) oknoKoncaj(); o.zunaj = false; });
     document.addEventListener('keydown', oknoTipka, true);
     o.visina = panel.offsetHeight;
     // Menjava vsebine (podrobnosti ↔ urejanje, nalaganje) naj višino okna spremeni gladko.
@@ -4554,7 +4556,55 @@
     if (e.key !== 'Escape' || !_okno) return;
     // Najprej naj se zapre tisto, kar je odprto NAD oknom (potrditev, predogled, spustni meni).
     if (document.querySelector('.sc-modal-back, .dok-lb, .cs-open')) return;
-    e.preventDefault(); oknoZapri();
+    e.preventDefault(); oknoKoncaj();
+  }
+  // Okno z obrazcem (moznosti.varuj = naslov vprašanja): odtis je stanje polj ob zadnjem shranjenem izrisu, null = obrazec se še nalaga.
+  function oknoOdtis(o) {
+    var d = [].map.call(o.vsebina.querySelectorAll('input:not([type="hidden"]),select,textarea'), function (f) { return f.type === 'checkbox' || f.type === 'radio' ? f.checked : f.value; });
+    [].forEach.call(o.vsebina.querySelectorAll('.seg-b.on'), function (b) { d.push(b.textContent); });
+    return d.join('\u0001');
+  }
+  function oknoNeshranjeno(o) { return !!(o && o.varuj && o.odtis != null && oknoOdtis(o) !== o.odtis); }
+  // Obrazec je pravkar izrisan ali shranjen: to je novo izhodišče. Če je shranjevanje sprožilo vprašanje ob zapiranju, se okno zdaj zapre.
+  function oknoZapomni(vsebina, nalaga) {
+    var o = _okno; if (!o || o.vsebina !== vsebina || !o.varuj) return;
+    o.odtis = nalaga ? null : oknoOdtis(o);
+    if (!nalaga && o.poShranitvi) { o.poShranitvi = false; setTimeout(function () { if (_okno === o) oknoZapri(); }); }
+  }
+  function oknoVprasaj(o) {
+    return new Promise(function (resolve) {
+      var back = document.createElement('div'); back.className = 'sc-modal-back';
+      back.innerHTML = '<div class="sc-modal okno-vpr" role="dialog" aria-modal="true"><h4></h4><div class="sc-modal-acts">' +
+        '<button type="button" class="sc-modal-btn ghost nevarno" data-v="zavrzi">Zavrzi</button><button type="button" class="sc-modal-btn ghost" data-v="">Nadaljuj</button><button type="button" class="sc-modal-btn primary" data-v="shrani">Shrani</button></div></div>';
+      back.querySelector('h4').textContent = o.varuj;
+      document.body.appendChild(back);
+      _modalA11y(back);
+      requestAnimationFrame(function () { back.classList.add('show'); });
+      var done = false;
+      function zapri(v) {
+        if (done) return; done = true; back.classList.remove('show'); document.removeEventListener('keydown', onKey, true);
+        setTimeout(function () { if (back.parentNode) back.parentNode.removeChild(back); }, 180); _modalVrniFokus(); resolve(v);
+      }
+      function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); zapri(''); } }
+      document.addEventListener('keydown', onKey, true);
+      back.addEventListener('click', function (e) { if (e.target === back) zapri(''); });
+      back.querySelectorAll('[data-v]').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); zapri(b.dataset.v); }); });
+      back.querySelector('[data-v="shrani"]').focus({ preventScroll: true });
+    });
+  }
+  // Zapiranje, ki ga sproži uporabnik (mimo okna, ×, Esc, Nazaj, Prekliči). kon = kaj namesto zapiranja okna (npr. nazaj na podrobnosti).
+  async function oknoKoncaj(kon) {
+    var o = _okno; if (!o || o.zapiram || o.sprasujem) return;
+    if (!oknoNeshranjeno(o)) { if (kon) kon(); else oknoZapri(); return; }
+    if (o.vsebina.querySelector('button.nalaga,[data-pv-ustvari]:disabled')) return;   // shranjevanje že teče
+    o.sprasujem = true;
+    var izbira = await oknoVprasaj(o);
+    o.sprasujem = false;
+    if (_okno !== o) return;
+    if (izbira === 'zavrzi') { o.odtis = null; if (kon) kon(); else { if (o.zavrzi) o.zavrzi(); oknoZapri(); } return; }
+    if (izbira !== 'shrani') return;
+    var g = [].filter.call(o.vsebina.querySelectorAll('[data-pv-ustvari],[data-shrani],[data-opomba-shrani]'), function (b) { return b.offsetParent; })[0];
+    if (g) { o.poShranitvi = true; g.click(); }
   }
   function oknoZapri(takoj) {
     var o = _okno; if (!o || o.zapiram) return;
@@ -4612,7 +4662,7 @@
   function oknoPoIzrisu() {
     var o = _okno; if (!o || o.zapiram) return;
     var k = o.najdi && o.najdi();
-    if (!k) { oknoZapri(); return; }
+    if (!k) { if (!oknoNeshranjeno(o)) oknoZapri(); return; }   // neshranjeno urejanje ne izgine zaradi osvežitve seznama
     if (k !== o.kartica) { o.kartica = k; if (!o.morf) k.classList.add('okno-vir'); }
     if (o.osvezi) { var nova = o.osvezi(k); if (nova && nova !== o.vsebina) oknoZamenjajVsebino(nova); }
     if ('_kartica' in o.vsebina) o.vsebina._kartica = k;
@@ -5179,7 +5229,7 @@
       if (!btn.isConnected || _okno) return;   // vmes izrisano na novo ali že odprto
     }
     const kont = btn.closest('#zadnji') ? '#zadnji' : '#arhivList';   // tudi zadnji listi na Domov
-    oknoOdpri(btn, box, () => document.querySelector(kont + ' .a-row[data-id="' + String(id).replace(/"/g, '\\"') + '"]'));
+    oknoOdpri(btn, box, () => document.querySelector(kont + ' .a-row[data-id="' + String(id).replace(/"/g, '\\"') + '"]'), { varuj: 'Shranim spremembe?', zavrzi: () => risiListDetajl(box) });
   }
 
   // Po shranjevanju se arhiv izriše na novo in razprta kartica se ob tem zapre.
@@ -5233,6 +5283,7 @@
       box.querySelector('[data-izbrisi]').addEventListener('click', () => izbrisiList(box));
     }
     wireOpomba(box);
+    oknoZapomni(box);
   }
 
   /* ── Opombi iz aplikacije (za stranko + za evidenco), samo prikaz ── */
@@ -5464,6 +5515,7 @@
     if (!kosi.length) { vrata.remove(); odkleni(); }
   }
   async function urediList(box) {
+    oknoZapomni(box, true);
     const n = box._note;
     const st = razcleniStevilko(n.number);
     const dnes = n.doc_date || danes10();
@@ -5519,7 +5571,7 @@
     if (!(box._items || []).length) dodajVrstico();
     osveziKg();
     box.querySelector('[data-dodaj]').addEventListener('click', () => dodajVrstico());
-    box.querySelector('[data-preklici]').addEventListener('click', () => risiListDetajl(box));
+    box.querySelector('[data-preklici]').addEventListener('click', () => oknoKoncaj(() => risiListDetajl(box)));
     box.querySelector('[data-shrani]').addEventListener('click', () => shraniList(box));
     wireSeg(box);
     letoIzDatuma(box);   // vrat s kljukicami tu ni — polja so bila zahtevana že ob nastanku lista
@@ -5554,6 +5606,7 @@
         if (!pBox.children.length) dodajVrstico();
         osveziKg();
       }); }
+    oknoZapomni(box);
   }
 
   async function shraniList(box) {
@@ -5794,22 +5847,23 @@
   function novListOkno(box, vir) {
     const gumb = vir || $('arhivNovBtn');
     oknoOdpri(gumb, box, () => gumb, {
-      glava: () => { const h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = 'Nov spremni list'; return h; },
-      obZaprtju: () => { if (box._zavrzi) { box._zavrzi = false; box.innerHTML = ''; delete box.dataset.osnutek; } }
+      glava: () => { const h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = box.querySelector('.nl-pregled') ? 'Predogled spremnega lista' : 'Nov spremni list'; return h; },
+      varuj: 'Shranim spremni list?',
+      obZaprtju: () => { box.innerHTML = ''; box.style.minHeight = ''; }   // brez osnutka: + vedno začne s praznim obrazcem
     });
   }
-  function novListZapri(box, zavrzi) {
-    if (_okno && _okno.vsebina === box) { box._zavrzi = !!zavrzi; oknoZapri(); }
-    else if (zavrzi) { box.innerHTML = ''; box.classList.remove('show'); delete box.dataset.osnutek; }
+  function novListZapri(box) {
+    if (_okno && _okno.vsebina === box) oknoZapri();
+    else { box.innerHTML = ''; box.classList.remove('show'); }
   }
   let _novListNalog = 0;
   async function novList(vir) {
     const box = $('novListBox');
     if (!box || _okno) return;
-    if (box.dataset.osnutek) { novListOkno(box, vir); return; }   // nedokončan vnos: odpri ga, kot je bil
     // okno se odpre takoj z nalagalnim trakom; obrazec se pokaže, ko je pripravljen
     box.innerHTML = NALAGANJE; box.style.minHeight = 'min(60vh, 520px)';
     novListOkno(box, vir);
+    oknoZapomni(box, true);
     const nalog = ++_novListNalog, zaprto = () => nalog !== _novListNalog || !_okno || _okno.vsebina !== box;
     const letos = new Date().getFullYear();
     let maxSeq = 0;
@@ -5835,7 +5889,7 @@
         <label class="ur-f"><span>Opomba na spremnem listu</span><textarea class="ur-opomba-txt" data-opomba-stranka rows="2" maxlength="600"></textarea></label>
         <label class="ur-f"><span>Interna opomba</span><textarea class="ur-opomba-txt" data-opomba-interno rows="2" maxlength="600"></textarea></label>
       </div>
-      <div class="u-acts nl-akc"><div class="nl-sum"><b data-sum-kos>0 kos</b> · <output class="ur-kg-auto" data-teza-auto>—</output></div><button type="button" class="ur-save" data-shrani>Ustvari</button><button type="button" data-preklici>Prekliči</button></div>
+      <div class="u-acts nl-akc"><div class="nl-sum"><b data-sum-kos>0 kos</b> · <output class="ur-kg-auto" data-teza-auto>—</output></div><button type="button" class="ur-save" data-shrani>Naprej</button><button type="button" data-preklici>Prekliči</button></div>
       <p class="u-sub ur-msg" data-msg></p></div>`;
     const pBox = box.querySelector('[data-postavke]');
     const obrazec = box.querySelector('.ur-form'), nalTrak = document.createElement('div');
@@ -5893,13 +5947,13 @@
     };
     napolniPremade();
     box.querySelector('[data-dodaj]').addEventListener('click', () => dodajVrstico());
-    box.querySelector('[data-preklici]').addEventListener('click', () => novListZapri(box, true));
+    box.querySelector('[data-preklici]').addEventListener('click', () => oknoKoncaj(() => novListZapri(box)));
     box.querySelector('[data-shrani]').addEventListener('click', () => shraniNovList(box));
     wireSeg(box);
     vnosVrata(box);
     { const _os = box.querySelector('[data-org]'); if (_os) _os.addEventListener('change', async () => { await nalozArtSez(box); napolniPremade(); osveziKgPrikaz(box); }); }
-    box.dataset.osnutek = '1';
     nalTrak.remove(); obrazec.style.display = ''; box.style.minHeight = '';
+    oknoZapomni(box);
   }
 
   // Vrstni red vnosa (nov spremni list): vrstica dobi zaporedno številko, ko ji prvič vpišeš količino;
@@ -5924,32 +5978,33 @@
       };
     }).filter(p => p.naziv && p.kosov > 0));   // premade prazne vrstice (brez količine) preskočimo
   }
-  // Pregled pred shranjevanjem: ista polja kot obrazec, le za branje; postavke v vrstnem redu vnosa.
+  // Pregled pred shranjevanjem je pravi spremni list na papirju (ista koda kot tisk), da se očitno loči od obrazca.
   // Nazaj vrne v obrazec (vse ostane), Ustvari shrani in zapre okno.
+  var NL_PAPIR_CSS = ":host{display:block}" +
+    ".a4{min-height:auto;aspect-ratio:210/297;padding:34px 36px 40px;font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}" +
+    ".sc-num{font-size:15px}.sc-client .cl{font-size:13px}.sc-client .sc-addr,.sc-client .sc-dates{font-size:12px}" +
+    "table.sc-table{font-size:13px}table.sc-table th{font-size:10px;white-space:nowrap}table.sc-table td{height:auto;padding:8px}.sc-weight,.sc-note{font-size:13px}" +
+    "@media(max-width:560px){.a4{padding:20px 16px 24px}.sc-wm{font-size:26px}.sc-biz{font-size:8px}.sc-head{gap:10px;margin-bottom:14px}.sc-wm{flex:none}.sc-biz{white-space:normal;min-width:0}.sc-box{padding:9px 11px}.sc-sign{min-width:76px;padding-left:10px}}";
   function nlPregled(box, d) {
     var obr = box.querySelector('.ur-form'); if (!obr) return;
     var star = box.querySelector('.nl-pregled'); if (star) star.remove();
-    var pv = document.createElement('div'); pv.className = 'ur-form nl-pregled';
-    var polje = function (lab, val, raz) { return '<div class="ur-f"><span>' + lab + '</span><div class="nl-pv' + (raz ? ' ' + raz : '') + '">' + val + '</div></div>'; };
+    var pv = document.createElement('div'); pv.className = 'nl-pregled';
     var kos = d.postavke.reduce(function (s2, p) { return s2 + p.kosov; }, 0);
-    pv.innerHTML = polje('Stranka', escape_(ORGIME[d.org_id] || '—')) +
-      '<div class="ur-grid nl-2">' + polje('Št.', escape_(d.seq + '/' + d.leto)) + polje('Datum', escape_(datum(d.doc_date))) + '</div>' +
-      '<p class="nl-izdal">Izdal: <b>' + escape_(d.izdal || '—') + '</b></p>' +
-      polje('Vrsta prevoza', d.prevoz === 'izredni' ? 'Izredni prevoz' : 'Redni prevoz') +
-      '<p class="u-sub" style="margin:10px 0 4px">Postavke</p>' +
-      d.postavke.map(function (p) { return '<div class="nl-pv-vr"><span class="ur-pid">' + escape_(p.koda || '') + '</span><div class="nl-pv">' + escape_(p.naziv) + '</div><div class="nl-pv nl-pv-kos">' + stevilo(p.kosov) + '</div></div>'; }).join('') +
-      (d.opStranka ? polje('Opomba na spremnem listu', escape_(d.opStranka), 'nl-pv-txt') : '') +
-      (d.opInterno ? polje('Interna opomba', escape_(d.opInterno), 'nl-pv-txt') : '') +
-      '<div class="u-acts nl-akc"><div class="nl-sum"><b>' + stevilo(kos) + ' kos</b> · ' + escape_(d.kgTxt || '—') + '</div><button type="button" class="ur-save" data-pv-ustvari>Ustvari</button><button type="button" data-pv-nazaj>Nazaj</button></div>' +
+    pv.innerHTML = '<div class="nl-miza"><div class="nl-papir"></div></div>' +
+      (d.opInterno ? '<div class="ur-f nl-interna"><span>Interna opomba</span><div class="nl-pv nl-pv-txt">' + escape_(d.opInterno) + '</div></div>' : '') +
+      '<div class="u-acts nl-akc"><div class="nl-sum"><b>' + stevilo(kos) + ' kos</b> · ' + escape_(d.kgTxt || '—') + '</div><button type="button" class="ur-save" data-pv-ustvari>Ustvari<span class="nl-dolgo"> spremni list</span></button><button type="button" data-pv-nazaj>Nazaj</button></div>' +
       '<p class="u-sub ur-msg" data-msg></p>';
-    obr.hidden = true; box.appendChild(pv);
-    var t0 = Date.now();   // Ustvari je na istem mestu kot v obrazcu: drugi dotik dvojnega pritiska ne sme shraniti brez pregleda
+    var list = { _note: { number: d.seq + '/' + d.leto, org_id: d.org_id, doc_date: d.doc_date, issued_name: d.izdal, weight_kg: d.kg, transport: d.prevoz, opomba_stranka: d.opStranka || null }, _items: d.postavke };
+    pv.querySelector('.nl-papir').attachShadow({ mode: 'open' }).innerHTML = '<style>' + dokCss() + NL_PAPIR_CSS + '</style><div class="a4">' + dokGlavaHtml() + spremniTeloHtml(list) + '</div>';   // CSS dokumenta velja le za papir
+    obr.hidden = true; box.appendChild(pv); oknoGlava();
+    var t0 = Date.now();   // drugi dotik dvojnega pritiska na Naprej ne sme shraniti brez pregleda
     pv.querySelector('[data-pv-nazaj]').addEventListener('click', function () { if (!this.disabled) nlObrazec(box); });
     pv.querySelector('[data-pv-ustvari]').addEventListener('click', function () { if (Date.now() - t0 >= 400) shraniNovList(box, true); });
     nlNaVrh(box);
-    setTimeout(function () { try { pv.querySelector('[data-pv-ustvari]').focus({ preventScroll: true }); } catch (e) {} }, 60);
+    // Enter na tipkovnici; na dotik ne, ker Safari ob fokusu iz kode okoli gumba izriše debel obroč
+    if (matchMedia('(hover:hover)').matches) setTimeout(function () { try { pv.querySelector('[data-pv-ustvari]').focus({ preventScroll: true }); } catch (e) {} }, 60);
   }
-  function nlObrazec(box) { var pv = box.querySelector('.nl-pregled'); if (pv) pv.remove(); var obr = box.querySelector('.ur-form'); if (obr) obr.hidden = false; nlNaVrh(box); }
+  function nlObrazec(box) { var pv = box.querySelector('.nl-pregled'); if (pv) pv.remove(); var obr = box.querySelector('.ur-form'); if (obr) obr.hidden = false; oknoGlava(); nlNaVrh(box); }
   function nlNaVrh(box) { var t = box.closest('.okno-telo'); if (t) t.scrollTop = 0; }
   async function shraniNovList(box, potrjeno) {
     const q = s => box.querySelector(s);
@@ -5971,8 +6026,8 @@
     const postavke = _postavkeNovega(box);
     if (!postavke.length) { msg.textContent = 'Vpiši količino vsaj pri enem artiklu.'; return; }
     msg.textContent = '';
-    if (!potrjeno) {   // najprej pregled (isti slog kot obrazec), shrani šele Ustvari v pregledu
-      nlPregled(box, { org_id, seq, leto, doc_date, izdal, prevoz: beriPrevoz(box), postavke, opStranka, opInterno, kgTxt: _kgEl ? _kgEl.textContent.trim() : '' });
+    if (!potrjeno) {   // najprej predogled lista, shrani šele Ustvari v predogledu
+      nlPregled(box, { org_id, seq, leto, doc_date, izdal, prevoz: beriPrevoz(box), postavke, opStranka, opInterno, kg: _kgAuto, kgTxt: _kgEl ? _kgEl.textContent.trim() : '' });
       return;
     }
     const gUst = pv && pv.querySelector('[data-pv-ustvari]'), gNaz = pv && pv.querySelector('[data-pv-nazaj]');
@@ -6029,10 +6084,10 @@
           const prej = _okno.obZaprtju;
           _okno.obZaprtju = function (k) { prej(k); if (k) { k.classList.add('arh-flash'); setTimeout(function () { k.classList.remove('arh-flash'); }, 1700); } };
         }
-        novListZapri(box, true);
+        novListZapri(box);
         if (!$('sec-domov').classList.contains('hidden')) risiPregled();   // ustvarjeno z Domova: ostane na Domovu
       } else {
-        box.innerHTML = ''; box.classList.remove('show'); delete box.dataset.osnutek;
+        box.innerHTML = ''; box.classList.remove('show');
         pokaziList(nid);
       }
     } catch (e) {
@@ -8239,11 +8294,12 @@
       <p class="u-sub ur-msg" data-msg role="status" aria-live="polite"></p>
       <div class="u-acts"><button type="button" data-preklici>Prekliči</button><button type="button" class="ur-save" data-shrani>Ustvari</button></div></div>`;
     box._grupe = grupe; box._imeCenika = imeCenika;
-    box.querySelector('[data-preklici]').addEventListener('click', () => oknoZapri());
+    box.querySelector('[data-preklici]').addEventListener('click', () => oknoKoncaj());
     box.querySelector('[data-shrani]').addEventListener('click', () => shraniNovaStranka(box));
     box.querySelector('[data-naziv]').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); shraniNovaStranka(box); } });
     oknoOdpri(gumb, box, () => $('novaStrankaBtn'), {
       glava: () => { const h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = 'Nova stranka'; return h; },
+      varuj: 'Shranim stranko?',
       obZaprtju: () => { box.innerHTML = ''; }
     });
     setTimeout(() => { const n = box.querySelector('[data-naziv]'); if (n) n.focus(); }, 380);

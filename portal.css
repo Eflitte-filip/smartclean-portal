@@ -2321,9 +2321,6 @@ html[data-view] .pz-seznam .row .num::before{content:none;}
 .ur-form[hidden]{display:none!important;}
 .nl-pv{display:flex;align-items:center;min-height:var(--ctrl-h,44px);padding:9px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);font-size:var(--fs-16);line-height:1.35;overflow-wrap:anywhere;}
 .nl-pv-txt{align-items:flex-start;white-space:pre-wrap;}
-.nl-pv-vr{display:grid;grid-template-columns:auto minmax(0,1fr) 92px;gap:8px;align-items:center;margin-bottom:6px;}
-.nl-pv-kos{justify-content:center;font-weight:600;font-variant-numeric:tabular-nums;}
-@media(max-width:560px){.nl-pv-vr{grid-template-columns:auto minmax(0,1fr) 64px;gap:6px;}}
 .nl-izdal{font-size:var(--fs-13);color:var(--mid);margin:-2px 0 10px;}
 .nl-izdal b{color:var(--ink);font-weight:600;}
 /* nov list: prazne količine niso napaka (se ne shranijo) — brez rumenih okvirjev povsod */
@@ -3774,3 +3771,25 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
 
 /* prijava: vsak korak se pojavi sam od sebe, ko postane viden */
 .v5 :is(#loginForm,#regForm,#gesloForm,#newPwForm,.reg-korak){animation:gibVstop var(--gib-t3) var(--gib) backwards;--gib-y:8px;}
+
+/* predogled novega spremnega lista: pravi list na papirju, na podlagi, ki se loči od obrazca */
+@keyframes gibPapir{from{opacity:0;transform:translate3d(0,22px,0) scale(.965);}to{opacity:1;transform:none;}}
+.nl-miza{margin:-20px -24px 0;padding:28px 24px 32px;background:color-mix(in srgb,var(--ink) 6%,var(--bg));}
+.nl-papir{max-width:600px;margin:0 auto;border-radius:3px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.1),0 14px 34px rgba(0,0,0,.16);animation:gibPapir var(--gib-t4) var(--gib) both;}
+.nl-interna{margin:16px 0 0;}
+.v5 .okno .nl-pregled .u-acts.nl-akc{margin:0 -24px;padding:10px 24px 12px;}   /* papir drsi pod vrstico: čez celo širino okna */
+.nl-pregled .nl-miza + .u-acts.nl-akc{border-top-color:transparent;}
+@media(max-width:560px){
+  .nl-miza{margin:-14px -16px 0;padding:16px;}
+  .v5 .okno .nl-pregled .u-acts.nl-akc{margin:0 -16px;padding-left:16px;padding-right:16px;}
+}
+@media(max-width:359px){ .nl-dolgo{display:none;} }
+/* × v glavi je sredinjen s transform: pritisk ga ne sme premakniti */
+.v5 .okno-glava-naslov .okno-x:not(:disabled):active{transform:translateY(-50%) scale(.96);}
+
+/* vprašanje ob zapiranju okna z neshranjenimi podatki */
+.okno-vpr{max-width:380px;}
+.okno-vpr h4{margin:0 0 18px;}
+.okno-vpr .sc-modal-acts{flex-wrap:wrap;gap:8px;}
+.okno-vpr .sc-modal-btn{flex:1 1 auto;justify-content:center;padding:0 14px;}
+.okno-vpr .sc-modal-btn.nevarno{color:var(--st-bad);}

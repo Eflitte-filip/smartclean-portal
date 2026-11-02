@@ -1,5 +1,16 @@
 [
  {
+  "v": "4.95",
+  "d": "2026-11-02",
+  "c": "2026-11-02T11:05:00+01:00",
+  "t": [
+   "Nov spremni list: gumb v obrazcu je zdaj Naprej. Pred ustvarjanjem se pokaže pravi spremni list na papirju, tak kot bo natisnjen, in šele tam je Ustvari spremni list.",
+   "Spremni listi in nova stranka: okna z neshranjenimi podatki se ne zaprejo več sama. Ob kliku mimo okna, ×, Esc, Nazaj ali Prekliči portal vpraša: Shrani, Zavrzi ali Nadaljuj.",
+   "Gumb + ne hrani več skritega osnutka in vedno odpre prazen obrazec.",
+   "Okna: gumb × v glavi se ob pritisku ne premakne več."
+  ]
+ },
+ {
   "v": "4.94",
   "d": "2026-11-01",
   "c": "2026-11-01T15:07:00+01:00",
