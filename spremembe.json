@@ -1,5 +1,14 @@
 [
  {
+  "v": "4.96",
+  "d": "2026-11-02",
+  "c": "2026-11-02T11:45:00+01:00",
+  "t": [
+   "Domov: portal opozori, če med številkami spremnih listov katera manjka. Pri vsaki lahko dodaš list ali jo označiš z Ni lista. Označene številke so pod seznamom Spremnih listov.",
+   "Vnos ur: urejena vrstica z odhodom, Zdaj in Vpiši sta v enem polju, enako visokem kot prihod."
+  ]
+ },
+ {
   "v": "4.95",
   "d": "2026-11-02",
   "c": "2026-11-02T11:05:00+01:00",

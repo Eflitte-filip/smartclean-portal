@@ -438,7 +438,7 @@
   }
   var DELI_GEN = 0;   // poveča se ob vsakem pisanju (začetek in konec): branje, med katerim se je kaj zapisalo, ni zanesljivo
   function pozabiDeli() { _DELI = {}; DELI_GEN++; }
-  var DELI_BRALNE = { touch_seen: 1, touch_last_login: 1, stranka_kosi: 1, app_prosta_stevilka: 1, app_pini_nastavljeni: 1, dn_weight: 1, rfid_po_strankah: 1 };   // klici, ki le berejo
+  var DELI_BRALNE = { touch_seen: 1, touch_last_login: 1, stranka_kosi: 1, app_prosta_stevilka: 1, app_pini_nastavljeni: 1, dn_weight: 1, rfid_po_strankah: 1, app_stevilke_pregled: 1 };   // klici, ki le berejo
   // zahteva v bazo, ki piše (fetch odjemalca): ob koncu še enkrat pozabi — branje, ki se je začelo med pisanjem, bi sicer 8 s hranilo staro
   function jePisanje(vir, opt) {
     var m = String((opt && opt.method) || (vir && vir.method) || 'GET').toUpperCase();
@@ -804,7 +804,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '4.95 · BETA';
+  var APP_VERZIJA = '4.96 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -899,6 +899,7 @@
     _softDelDN = true,      // ali obstaja stolpec delivery_notes.deleted_at (migracija 50)
     _softDelDoc = true,     // ali obstaja stolpec documents.deleted_at (migracija 50)
     STAR_SET = new Set();   // note_id-ji, ki vsebujejo star zapis (postavka brez article_id)
+  var MANJKA = [], BREZ_LISTA = [], _mkRisi = null;   // številke brez spremnega lista: nerešene in označene z »Ni lista«
 
   async function naloziOrge() {
     // skrij izbrisane stranke; če stolpca še ni, beri vse. Stranično (brez meje 1000).
@@ -2956,7 +2957,7 @@
       var r = document.createElement('div'); r.className = 'vu-izm'; r.dataset.i = i; r._in = inv; r._out = outv || '';
       r.innerHTML = '<div class="vu-sk" data-k="in"><span class="vu-sk-t">Prihod</span><div class="vu-cas"></div></div>' +
         '<div class="vu-sk" data-k="out"><span class="vu-sk-t">Odhod<button type="button" class="vu-odhod-x">Še dela</button></span><div class="vu-cas"></div>' +
-          '<div class="vu-brez"><button type="button" class="vu-zdaj">Zdaj</button><button type="button" class="vu-odhod-dodaj">' + IKO_T_PLUS + 'Odhod</button></div></div>' +
+          '<div class="vu-brez"><button type="button" class="vu-zdaj">Zdaj</button><button type="button" class="vu-odhod-dodaj">Vpiši</button></div></div>' +
         '<button type="button" class="pris-int-del vu-x" aria-label="Odstrani izmeno" title="Odstrani izmeno">' + IKO_ZAPRI + '</button>';
       vuUra(r.querySelector('[data-k="in"] .vu-cas'), inv, function (v) { r._in = v; dotakni(); });
       r._postaviOdhod = function () {
@@ -4122,6 +4123,7 @@
       STAR_SET = new Set();
       return;
     }
+    const _mk = naloziManjkajoce();
     // Beri VSE liste po straneh (brez 1000-vrstičnega limita — mora delati še čez leta).
     // Stabilna paginacija: doc_date + id kot razločevalo.
     const _kol = 'id,number,doc_date,total_pieces,weight_kg,org_id,issued_name,popravil,popravljeno_at,popravki,source,transport,potrjeno,legacy_id,opomba,opomba_avtor,opomba_at,opomba_stranka,opomba_evidenca';
@@ -4146,6 +4148,7 @@
       head: true
     }).is('deleted_at', null);
     VSEHLISTOV = count || 0;
+    await Promise.race([_mk, new Promise(ok => setTimeout(ok, 1500))]);   // počasen odgovor le pozneje posodobi stanje na Domovu
     // Zberi liste s starim zapisom (postavka brez povezave na artikel → article_id IS NULL)
     // Pregled CELE tabele postavk je daleč najdražja poizvedba ob prijavi, rabimo
     // pa jo le za oznako »star zapis« in števec nepotrjenih — zato v ozadje.
@@ -4244,6 +4247,105 @@
     var m = n % 100;
     return stevilo(n) + (m === 1 ? ' list še ni potrjen' : m === 2 ? ' lista še nista potrjena' : (m === 3 || m === 4) ? ' listi še niso potrjeni' : ' listov še ni potrjenih');
   }
+  // ── Manjkajoče številke spremnih listov (baza: 20261102120000_manjkajoce_stevilke.sql) ──
+  async function naloziManjkajoce() {
+    try {
+      var r = await sb.rpc('app_stevilke_pregled');
+      if (!r || r.error || !Array.isArray(r.data)) return;
+      MANJKA = r.data.filter(function (x) { return !x.brez_lista; });
+      BREZ_LISTA = r.data.filter(function (x) { return x.brez_lista; });
+      var b = $('arhivBrezBtn'); if (b) b.classList.toggle('hidden', !BREZ_LISTA.length);
+      if (LISTI.length) risiDomovStatus();
+      if (_mkRisi) _mkRisi();
+    } catch (e) {}
+  }
+  function manjkaBesedilo(m) {
+    var n = m.length, d = n % 100, st = m.map(function (x) { return x.stevilka; });
+    var gl = d === 2 ? 'Manjkata' : (d === 3 || d === 4) ? 'Manjkajo' : 'Manjka', sam = d === 1 ? 'številka' : d === 2 ? 'številki' : (d === 3 || d === 4) ? 'številke' : 'številk';
+    return n > 4 ? gl + ' <b>' + stevilo(n) + ' ' + sam + '</b> spremnih listov' : gl + ' ' + sam + ' <b>' + (n === 2 ? st.join('</b> in <b>') : st.join(', ')) + '</b>';
+  }
+  // Stanje na Domovu (samo osebje): zadnji list naj bo od včeraj (razen če je bila včeraj nedelja → sobota), vsi listi potrjeni, nobena številka ne manjka.
+  function risiDomovStatus() {
+    var el = $('domovStatus'); if (!el) return;
+    var html = '';
+    if (OSEBJE && LISTI.length) {
+      var _iso = function (dt) { return dt.getFullYear() + '-' + ('0' + (dt.getMonth() + 1)).slice(-2) + '-' + ('0' + dt.getDate()).slice(-2); };
+      var zadnjiDatum = LISTI.reduce(function (m, l) { return (l.doc_date && l.doc_date > m) ? l.doc_date : m; }, '');
+      var _d = new Date(); _d.setHours(0, 0, 0, 0); _d.setDate(_d.getDate() - 1); if (_d.getDay() === 0) _d.setDate(_d.getDate() - 1);
+      var azuren = zadnjiDatum && zadnjiDatum >= _iso(_d);
+      var nepotrjeni = LISTI.filter(function (l) { return (l.total_pieces > 0) && l.potrjeno !== true && !STAR_SET.has(l.id); }).length;
+      var opozori = function (podatek, ik, vsebina, naslov) { return '<div class="preg-status ps-warn ps-klik" role="button" tabindex="0" ' + podatek + (naslov ? ' title="' + naslov + '"' : '') + '><span class="ps-ik">' + ik + '</span><span>' + vsebina + '</span></div>'; };
+      if (!azuren) html = opozori('data-arhiv', IKO_KLICAJ, 'Zadnji spremni list je od <b>' + (zadnjiDatum ? datum(zadnjiDatum) : '—') + '</b> — morda manjkajo novejši.');
+      else if (nepotrjeni > 0) html = opozori('data-nepotrjeni', IKO_TOCKA, '<b>' + nepotrjeniBesedilo(nepotrjeni) + '</b>', 'Pokaži nepotrjene');
+      else if (!MANJKA.length) html = '<div class="preg-status ps-ok"><span class="ps-ik">' + IKO_KLJUKICA + '</span><span>Vse pregledano in dodano · zadnji list <b>' + (zadnjiDatum ? datum(zadnjiDatum) : '—') + '</b>.</span></div>';
+      if (MANJKA.length) html += opozori('data-manjka', IKO_KLICAJ, manjkaBesedilo(MANJKA));
+    }
+    if (el._html === html) return;
+    el._html = html; el.innerHTML = html;
+    el.querySelectorAll('.ps-klik').forEach(function (p) {
+      var odpri = function () { if (p.hasAttribute('data-manjka')) { manjkaOdpri(); return; } if (p.hasAttribute('data-nepotrjeni')) ARH_NEPOTRJENI = true; pojdi('arhiv'); };
+      p.addEventListener('click', odpri);
+      p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); odpri(); } });
+    });
+  }
+  // Vsaka manjkajoča številka: Dodaj list (obrazec s to številko) ali Ni lista (ne opozarja več, Vrni jo vrne).
+  function manjkaOdpri() {
+    if (document.querySelector('.mk-modal')) return;
+    var w = sme('arhiv', 'w');
+    var back = document.createElement('div'); back.className = 'sc-modal-back';
+    back.innerHTML = '<div class="sc-modal mk-modal" role="dialog" aria-modal="true"><h4></h4><div class="mk-seznam"></div>' +
+      '<div class="sc-modal-acts"><button type="button" class="sc-modal-btn ghost" data-zapri>Zapri</button></div></div>';
+    var sez = back.querySelector('.mk-seznam');
+    var vrsta = function (x, meta, gumbi) {
+      return '<div class="mk-vr"><div class="mk-st"><b>' + x.stevilka + '/' + x.leto + '</b>' + (meta ? '<span>' + escape_(meta) + '</span>' : '') + '</div>' + (w ? '<div class="mk-akc" data-k="' + x.leto + '/' + x.stevilka + '">' + gumbi + '</div>' : '') + '</div>';
+    };
+    var najdi = function (k) { return MANJKA.concat(BREZ_LISTA).filter(function (x) { return x.leto + '/' + x.stevilka === k; })[0]; };
+    _mkRisi = function () {
+      if (!MANJKA.length && !BREZ_LISTA.length) { zapri(); return; }
+      back.querySelector('h4').textContent = MANJKA.length ? 'Manjkajoče številke' : 'Številke brez lista';
+      sez.innerHTML = MANJKA.map(function (x) {
+        return vrsta(x, x.prej_datum ? 'Prejšnji list ' + datum(x.prej_datum) : '', '<button type="button" class="cgrp-btn ghost" data-ni>Ni lista</button><button type="button" class="cgrp-btn" data-dodaj>Dodaj list</button>');
+      }).join('') + (BREZ_LISTA.length && MANJKA.length ? '<p class="u-sub mk-pod">Ni lista</p>' : '') + BREZ_LISTA.map(function (x) {
+        return vrsta(x, (x.oznacil ? x.oznacil + ' · ' : '') + (x.oznaceno ? datum(x.oznaceno.slice(0, 10)) : ''), '<button type="button" class="cgrp-btn ghost" data-vrni>Vrni</button>');
+      }).join('');
+    };
+    var done = false;
+    function zapri() {
+      if (done) return; done = true; _mkRisi = null; back.classList.remove('show'); document.removeEventListener('keydown', onKey, true);
+      setTimeout(function () { if (back.parentNode) back.parentNode.removeChild(back); }, 180); _modalVrniFokus();
+    }
+    function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); zapri(); } }
+    var tRazpored = 0;   // vrstice se po označitvi premaknejo: drugi dotik dvojnega pritiska ne sme zadeti naslednje številke
+    sez.addEventListener('click', async function (e) {
+      var g = e.target.closest('button'), ak = g && g.closest('.mk-akc'); if (!ak || Date.now() - tRazpored < 450) return;
+      var x = najdi(ak.dataset.k); if (!x) return;
+      if (g.hasAttribute('data-dodaj')) {
+        var vDomov = !$('sec-domov').classList.contains('hidden');
+        zapri(); novList(vDomov ? $('domovNovBtn') : null, x);
+        return;
+      }
+      var brez = g.hasAttribute('data-ni');
+      ak.querySelectorAll('button').forEach(function (b) { b.disabled = true; }); g.classList.add('nalaga');
+      if (!await manjkaOznaci(x, brez)) { ak.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); g.classList.remove('nalaga'); return; }
+      tRazpored = Date.now();
+      if (brez) toast('Številka ' + x.stevilka + ': ni lista', { besedilo: 'Razveljavi', ob: function () { manjkaOznaci(x, false); } });
+    });
+    back.querySelector('[data-zapri]').addEventListener('click', zapri);
+    back.addEventListener('click', function (e) { if (e.target === back) zapri(); });
+    document.addEventListener('keydown', onKey, true);
+    _mkRisi();
+    document.body.appendChild(back);
+    _modalA11y(back);
+    requestAnimationFrame(function () { back.classList.add('show'); });
+  }
+  async function manjkaOznaci(x, brez) {
+    var r = await sb.rpc('app_stevilka_brez_lista', { p_leto: x.leto, p_stevilka: x.stevilka, p_brez: brez });
+    if (r.error) { toast(napakaBesedilo(r.error)); return false; }
+    if (r.data === false) { toast('List s številko ' + x.stevilka + ' že obstaja.'); await naloziListe(); risiDomovStatus(); return false; }
+    logDodaj('Arhiv', brez ? 'Številka brez lista' : 'Številka spet manjka', x.stevilka + '/' + x.leto);
+    await naloziManjkajoce();
+    return true;
+  }
   function risiPregledStatus() { if ($('sec-domov') && !$('sec-domov').classList.contains('hidden') && !_okno) risiPregled(true); }
   // tiho = osvežitev v živo (druga naprava, ponovna povezava, potrditev): brez ponovne vstopne animacije
   function risiPregled(tiho) {
@@ -4281,7 +4383,7 @@
     if (OSEBJE) _domUreFill();
 
     /* zadnjih šest mesecev */
-    if ($('domovStatus')) $('domovStatus').innerHTML = '';
+    risiDomovStatus();
     if (!LISTI.length) {
       $('mesecni').innerHTML = '';
       $('zadnji').innerHTML = LISTI_NAPAKA ? napakaListi : prazniListi(OSEBJE ? 'osebje' : 'stranka');
@@ -4309,24 +4411,6 @@
         <span class="bars-lab">${escape_(m.ime)}</span></div>`).join('') + '</div></div>';
     const stKljuc = l => { const d = String(l.number || '').split('/'); return (parseInt(d[1], 10) || 0) * 1e7 + (parseInt(d[0], 10) || 0); };
     const razvrsceni = LISTI.slice().sort((a, b) => stKljuc(b) - stKljuc(a));
-    // Status ažurnosti arhiva (samo osebje): zadnji list naj bo od včeraj (razen če je bila včeraj nedelja → sobota).
-    var statusHtml = '';
-    if (OSEBJE) {
-      var _iso = function (dt) { return dt.getFullYear() + '-' + ('0' + (dt.getMonth() + 1)).slice(-2) + '-' + ('0' + dt.getDate()).slice(-2); };
-      var zadnjiDatum = LISTI.reduce(function (m, l) { return (l.doc_date && l.doc_date > m) ? l.doc_date : m; }, '');
-      var _d = new Date(); _d.setHours(0, 0, 0, 0); _d.setDate(_d.getDate() - 1); if (_d.getDay() === 0) _d.setDate(_d.getDate() - 1);
-      var pricakovan = _iso(_d);
-      var azuren = zadnjiDatum && zadnjiDatum >= pricakovan;
-      var nepotrjeni = LISTI.filter(function (l) { return (l.total_pieces > 0) && l.potrjeno !== true && !STAR_SET.has(l.id); }).length;
-      if (!azuren) statusHtml = '<div class="preg-status ps-warn ps-klik" role="button" tabindex="0" data-arhiv><span class="ps-ik">' + IKO_KLICAJ + '</span><span>Zadnji spremni list je od <b>' + (zadnjiDatum ? datum(zadnjiDatum) : '—') + '</b> — morda manjkajo novejši.</span></div>';
-      else if (nepotrjeni > 0) statusHtml = '<div class="preg-status ps-warn ps-klik" role="button" tabindex="0" data-nepotrjeni title="Pokaži nepotrjene"><span class="ps-ik">' + IKO_TOCKA + '</span><span><b>' + nepotrjeniBesedilo(nepotrjeni) + '</b> · pokaži in potrdi</span></div>';
-      else statusHtml = '<div class="preg-status ps-ok"><span class="ps-ik">' + IKO_KLJUKICA + '</span><span>Vse pregledano in dodano · zadnji list <b>' + (zadnjiDatum ? datum(zadnjiDatum) : '—') + '</b>.</span></div>';
-    }
-    if ($('domovStatus')) {
-      $('domovStatus').innerHTML = statusHtml;
-      var _np = $('domovStatus').querySelector('[data-nepotrjeni], [data-arhiv]');
-      if (_np) { var _odpri = function () { if (_np.hasAttribute('data-nepotrjeni')) ARH_NEPOTRJENI = true; pojdi('arhiv'); }; _np.addEventListener('click', _odpri); _np.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _odpri(); } }); }
-    }
     const zadnjiListi = razvrsceni.slice(0, 6).sort((a, b) => String(b.doc_date || '').localeCompare(String(a.doc_date || '')) || stKljuc(b) - stKljuc(a));
     $('zadnji').innerHTML = '<div class="dom-zadnji-h"><h3 class="sec-h">Zadnji spremni listi</h3>' +
       (razvrsceni.length > zadnjiListi.length ? '<button type="button" class="link-btn" data-vsi>Vsi spremni listi</button>' : '') + '</div>' + tabelaListov(zadnjiListi, true, null, true);
@@ -5114,6 +5198,7 @@
   { const _nb = $('arhivNovBtn'); if (_nb) _nb.addEventListener('click', () => novList()); }
   // Domov: isti nov spremni list — odpre se v Spremnih listih (okno zraste iz tamkajšnjega gumba, nov list se pokaže v seznamu)
   { const _db = $('domovNovBtn'); if (_db) _db.addEventListener('click', () => novList(_db)); }
+  { const _bl = $('arhivBrezBtn'); if (_bl) _bl.addEventListener('click', () => manjkaOdpri()); }
   { const _kb = $('arhivKosBtn'); if (_kb) _kb.addEventListener('click', () => arhivKos()); }
   // ── Koš spremnih listov (Nedavno brisani — obnovljivi) ──
   async function arhivKos() {
@@ -5857,7 +5942,8 @@
     else { box.innerHTML = ''; box.classList.remove('show'); }
   }
   let _novListNalog = 0;
-  async function novList(vir) {
+  // pred = manjkajoča številka (leto, stevilka, prej_datum): obrazec z njo in z datumom prejšnjega lista
+  async function novList(vir, pred) {
     const box = $('novListBox');
     if (!box || _okno) return;
     // okno se odpre takoj z nalagalnim trakom; obrazec se pokaže, ko je pripravljen
@@ -5865,7 +5951,7 @@
     novListOkno(box, vir);
     oknoZapomni(box, true);
     const nalog = ++_novListNalog, zaprto = () => nalog !== _novListNalog || !_okno || _okno.vsebina !== box;
-    const letos = new Date().getFullYear();
+    const letos = pred ? pred.leto : new Date().getFullYear();
     let maxSeq = 0;
     LISTI.forEach(l => { const d = String(l.number || '').split('/'); if ((parseInt(d[1], 10) || 0) === letos) { const sq = parseInt(d[0], 10) || 0; if (sq > maxSeq) maxSeq = sq; } });
     // baza pozna tudi številke, ki jih je tablica rezervirala in še ne poslala (70_rezervacija_stevilk.sql)
@@ -5876,9 +5962,9 @@
     box.innerHTML = `<div class="ur-form">
       <label class="ur-f"><span>Stranka</span><select data-org>${orgOpt}</select></label>
       <div class="ur-grid nl-2">
-        <label class="ur-f"><span>Št.</span><input type="number" data-seq value="${maxSeq + 1}"></label>
+        <label class="ur-f"><span>Št.</span><input type="number" data-seq value="${pred ? pred.stevilka : maxSeq + 1}"></label>
         <label class="ur-f" hidden><span>Leto</span><input type="number" data-leto value="${letos}"></label>
-        <label class="ur-f"><span>Datum</span><input type="date" data-datum value="${dnes}"></label>
+        <label class="ur-f"><span>Datum</span><input type="date" data-datum value="${(pred && pred.prej_datum) || dnes}"></label>
       </div>
       <p class="nl-izdal">Izdal: <b>${escape_(JAZIME || '—')}</b><input type="hidden" data-izdal value="${escape_(JAZIME || '')}"></p>
       <div class="ur-f"><span>Vrsta prevoza</span>${segPrevoz('redni')}</div>
