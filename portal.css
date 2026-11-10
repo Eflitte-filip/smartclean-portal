@@ -3825,3 +3825,30 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
 .mk-seznam .mk-pod{margin:8px 2px 0;font-size:var(--fs-13);}
 @media(hover:none){ .mk-akc .cgrp-btn.ghost:hover{border-color:var(--line);color:var(--mid);} }   /* iOS pusti :hover na gumbu, ki pride pod prst */
 .arh-kos-pov .link-btn + .link-btn{margin-left:18px;}
+
+/* Fakture: opozorilo, da znesek ni popoln, mora biti opazno */
+.v5 .fak-warn{color:var(--st-warn-ink);font-style:normal;font-weight:500;}
+
+/* ══ Okno na telefonu: vrstica z gumbi in tipkovnica ══
+   Odmik za domači indikator je v vrstici z gumbi, ne v drsnem delu: lepljiva vrstica se drži notranjega roba drsnega dela,
+   zato je obvisela 34 pt nad dnom in pod njo se je pomikal seznam. Vrstica je zadnja v vsebini, da je ob koncu na istem mestu. */
+@media(max-width:560px){
+  .v5 .okno-telo:has(.u-acts.nl-akc){padding-bottom:0;}
+  .v5 .okno .nov-list:has(.u-acts.nl-akc){padding-bottom:0;}
+  .v5 .okno .u-acts.nl-akc,.v5 .okno .nl-pregled .u-acts.nl-akc{padding-bottom:calc(12px + env(safe-area-inset-bottom));}
+  .v5 .okno .ur-form .ur-msg:empty,.v5 .okno .nl-pregled .ur-msg:empty{display:none;}
+  /* iOS ob koncu seznama odskoči in lepljivo vrstico dvigne z vsebino (obvisi nad praznino): drsni del ne odskakuje */
+  .v5 .okno-telo:has(.u-acts.nl-akc){overscroll-behavior-y:none;}
+  .v5 .okno .ur-form:has(> .u-acts.nl-akc){padding-bottom:0;}   /* ob koncu seznama vrstica ne obvisi 2 px nad dnom */
+}
+/* odprta tipkovnica (oknoVidno v portal.js): okno pokrije natanko vidni del nad njo */
+.okno-back.okno-tipk{bottom:auto;height:var(--tipk-h);transform:translate3d(0,var(--tipk-y),0);}
+.okno-back.okno-tipk .okno{max-height:calc(var(--tipk-h) - 48px);}
+.okno-back.okno-tipk .okno-zatemni{top:-100vh;bottom:-100vh;}   /* pod prosojno tipkovnico je ozadje okna, ne stran */
+/* prostor, da tudi zadnje polje pride na sredino vidnega dela (oknoNaSredino); pri lepljivi vrstici nad njo, sicer na koncu */
+.okno-back.okno-tipk .ur-form > .u-acts.nl-akc{margin-top:calc(14px + var(--tipk-rob,0px));}
+.okno-back.okno-tipk .okno-telo:not(:has(.u-acts.nl-akc))::after{content:'';display:block;height:var(--tipk-rob,0px);}
+@media(max-width:560px){
+  .v5 .okno-back.okno-tipk .okno{height:calc(var(--tipk-h) - var(--vrh));max-height:none;}
+  .v5 .okno-back.okno-tipk .okno .u-acts.nl-akc{padding-bottom:12px;}   /* domači indikator je pod tipkovnico */
+}

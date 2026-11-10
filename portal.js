@@ -804,7 +804,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '4.96 · BETA';
+  var APP_VERZIJA = '4.97 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -4430,7 +4430,7 @@
      ne scale, zato se besedilo med animacijo ne razteguje. */
   var _okno = null;
   var OKNO_KRIVULJA = GIB_KRIVULJA;
-  var OKNO_RAST_MS = 480, OKNO_KRCENJE_MS = 340;
+  var OKNO_RAST_MS = 480, OKNO_KRCENJE_MS = 340, OKNO_POJAV_MS = 600;   // pojav = --gib-t4, kot .sc-modal
   // telefon: okno v mirovanju nima zaobljenih robov, med rastjo in krčenjem pa jih ima (kartica je zaobljena)
   function oknoRobovi(panel, odpri, ms) {
     if (parseFloat(getComputedStyle(panel).borderTopLeftRadius)) return;
@@ -4606,11 +4606,13 @@
     back.addEventListener('click', function (e) { if (e.target === back && o.zunaj) oknoKoncaj(); o.zunaj = false; });
     document.addEventListener('keydown', oknoTipka, true);
     o.visina = panel.offsetHeight;
+    o.vvPoln = window.visualViewport ? window.visualViewport.height : 0;
+    o.sy = window.scrollY;
     // Menjava vsebine (podrobnosti ↔ urejanje, nalaganje) naj višino okna spremeni gladko.
     if (window.ResizeObserver && !oknoMirno()) {
       o.ro = new ResizeObserver(function () {
         var h = panel.offsetHeight;
-        if (!o.morf && !o.zapiram && Math.abs(h - o.visina) > 2 && panel.animate) {
+        if (!o.morf && !o.zapiram && Math.abs(h - o.visina) > 2 && panel.animate && !back.classList.contains('okno-tipk')) {
           panel.animate([{ height: o.visina + 'px' }, { height: h + 'px' }], { duration: 340, easing: OKNO_KRIVULJA });
         }
         o.visina = h;
@@ -4618,8 +4620,19 @@
       o.ro.observe(vsebina);
     }
     void back.offsetWidth; back.classList.add('show');   // zatemnitev začne takoj (brez čakanja na naslednji okvir)
-    if (oknoMirno() || !panel.animate) { kartica.classList.add('okno-vir'); back.classList.add('okno-cel'); oknoFokus(o); return; }
+    // Okno iz gumba + ne raste iz drobnega kroga (pomanjšano okno je bilo raztegnjen pravokotnik z odrezano vsebino):
+    // pride kot pogovorna okna portala — iz rahle pomanjšave, kratka pot navzgor, gumb ostane na mestu.
+    o.pojav = !!(moznosti.pojav || kartica.classList.contains('tb-prim'));
+    if (oknoMirno() || !panel.animate) { if (!o.pojav) kartica.classList.add('okno-vir'); back.classList.add('okno-cel'); oknoFokus(o); return; }
     o.morf = true;
+    if (o.pojav) {
+      var konecPojava = function () { o.morf = false; if (o.zapiram) return; o.visina = panel.offsetHeight; back.classList.add('okno-cel'); oknoVidno(); };
+      oknoRobovi(panel, true, OKNO_POJAV_MS);
+      panel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, delay: 40, easing: 'ease', fill: 'backwards' });   // stran se najprej zatemni, nato pride okno
+      panel.animate([{ transform: 'translate3d(0,14px,0) scale(.965)' }, { transform: 'none' }], { duration: OKNO_POJAV_MS, easing: OKNO_KRIVULJA }).finished.then(konecPojava, konecPojava);
+      oknoFokus(o);
+      return;
+    }
     var kl = oknoKljuci(o, OKNO_ODPRI, false);
     var duh = oknoDuh(o);
     kartica.classList.add('okno-vir');   // kartica se spremeni v okno: njeno mesto se izprazni takoj
@@ -4628,11 +4641,128 @@
     duh.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 130, delay: 30, easing: 'ease', fill: 'forwards' });
     notr.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, delay: 70, easing: 'ease', fill: 'backwards' });
     notr.animate(kl.notr, { duration: OKNO_RAST_MS, easing: 'linear' });
-    var konecRasti = function () { duh.remove(); o.morf = false; o.visina = panel.offsetHeight; back.classList.add('okno-cel'); };   // odprto: telefon — polno ozadje (Safari po njem pobarva pasova)
+    var konecRasti = function () { duh.remove(); o.morf = false; o.visina = panel.offsetHeight; back.classList.add('okno-cel'); oknoVidno(); };   // odprto: telefon — polno ozadje (Safari po njem pobarva pasova); tipkovnica, odprta med rastjo
     oknoRobovi(panel, true, OKNO_RAST_MS);
     panel.animate(kl.okno, { duration: OKNO_RAST_MS, easing: 'linear' }).finished.then(konecRasti, konecRasti);
     oknoFokus(o);
   }
+  // ── Okno in tipkovnica ──
+  // iOS ob vpisu v polje premakne celo stran (tudi zaklenjeno), pritrjeno okno pa pusti na starem mestu: okno zdrsne
+  // navzgor (glava izgine), vrstica z gumbi obvisi sredi zaslona, pod oknom se skozi prosojno tipkovnico vidi Domov.
+  // Puščici nad tipkovnico skočita le na vidna polja, zato sta preskočili vrstico pod vrstico z gumbi. Okno zato, dokler
+  // je tipkovnica odprta, pokrije natanko vidni del nad njo; polje z vnosom in sosednji vrstici ostanejo nad vrstico z gumbi.
+  // iPhone polje ob dotiku postavi na sredino vidnega dela in stran premakne z lastno animacijo, ki ji okno ne more slediti
+  // (poskoči in zdrsne nazaj). Zato polje na sredino postavimo sami, že ob dotiku: iOS potem nima česa premikati.
+  var _tipkH = {};   // izmerjene višine tipkovnic po vrsti (številčnica, števila, črke)
+  try { _tipkH = JSON.parse(localStorage.getItem('sc-tipk') || '{}') || {}; } catch (e) { _tipkH = {}; }
+  var _dotikT = 0;   // puščici nad tipkovnico nista dotik strani
+  document.addEventListener('touchstart', function () { _dotikT = Date.now(); }, { passive: true, capture: true });
+  function oknoTipkPolje(el) { return !!(el && el.matches && el.matches('input:not([type]),input[type=text],input[type=number],input[type=email],input[type=tel],input[type=search],input[type=password],input[type=url],textarea')); }
+  function oknoTipkVrsta(el) {
+    if (el.tagName === 'TEXTAREA') return 'crke';
+    if (/^(numeric|decimal|tel)$/.test(el.inputMode || '') || el.type === 'tel') return 'stevilcnica';
+    return el.type === 'number' ? 'stevila' : 'crke';
+  }
+  function oknoTipk(o, y, h) {
+    o.back.classList.add('okno-tipk');
+    o.back.style.setProperty('--tipk-y', Math.round(y) + 'px');
+    o.back.style.setProperty('--tipk-h', Math.round(h) + 'px');
+    o.tipkVis = Math.round(h);
+    o.visina = o.panel.offsetHeight;
+  }
+  function oknoTipkKonec(o) {
+    clearTimeout(o.tipkZapUra);
+    if (!o.back.classList.contains('okno-tipk')) return;
+    o.back.classList.remove('okno-tipk');
+    ['--tipk-y', '--tipk-h', '--tipk-rob'].forEach(function (p) { o.back.style.removeProperty(p); });
+    o.tipkVis = 0; o.rob = 0;
+    o.visina = o.panel.offsetHeight;
+    oknoStranNazaj(o);
+  }
+  // Stran pod oknom je iOS med vnosom morda premaknil (pod oknom se ne vidi): nazaj, kjer je bila ob odprtju.
+  function oknoStranNazaj(o) { if (o.sy != null && Math.abs(window.scrollY - o.sy) > 1) window.scrollTo(0, o.sy); }
+  function oknoVidno() {
+    var o = _okno, vv = window.visualViewport; if (!o || !vv || o.zapiram || o.morf) return;
+    var akt = document.activeElement, vnos = oknoTipkPolje(akt) && o.panel.contains(akt);
+    var tipk = o.back.classList.contains('okno-tipk');
+    o.vvPoln = vnos ? Math.max(o.vvPoln || 0, vv.height) : vv.height;
+    if (!(vnos && vv.height < o.vvPoln - 100)) {
+      if (o.tipkNapoved) return;
+      if (vnos && tipk) {
+        // ob prehodu na drugo polje (puščici) iOS za hip javi, da tipkovnice ni: okno ostane, sledi le premiku
+        o.back.style.setProperty('--tipk-y', Math.round(vv.offsetTop) + 'px');
+        clearTimeout(o.tipkZapUra);
+        o.tipkZapUra = setTimeout(function () {
+          var v = window.visualViewport;
+          if (_okno === o && !o.zapiram && v && v.height >= o.vvPoln - 100) oknoTipkKonec(o);
+        }, 350);
+        return;
+      }
+      oknoTipkKonec(o); return;
+    }
+    var bilo = tipk && !o.tipkNapoved ? o.tipkVis : 0;
+    o.tipkNapoved = false; clearTimeout(o.tipkUra); clearTimeout(o.tipkZapUra);
+    var h = Math.round(o.vvPoln - vv.height), vrsta = oknoTipkVrsta(akt);
+    if (_tipkH[vrsta] !== h) { _tipkH[vrsta] = h; try { localStorage.setItem('sc-tipk', JSON.stringify(_tipkH)); } catch (e) {} }
+    oknoTipk(o, vv.offsetTop, vv.height);
+    if (Math.abs(bilo - o.tipkVis) > 1) oknoPokaziPolje(akt);   // le ob spremembi višine — ne med uporabnikovim drsenjem
+  }
+  // Polje z vnosom na sredino vidnega dela. Zadnjim poljem doda prostor nad vrstico z gumbi, da pridejo do sredine.
+  function oknoNaSredino(o, el, gladko) {
+    var telo = o.telo; if (!telo.contains(el)) return;
+    var b = o.back.getBoundingClientRect(), r = el.getBoundingClientRect();
+    var vis = el.tagName === 'TEXTAREA' ? Math.min(r.height, 44) : r.height;   // večvrstično polje: šteje prva vrstica (kazalček)
+    var d = Math.round(r.top + vis / 2 - (b.top + (o.tipkVis || b.height) / 2));
+    var pros = telo.scrollHeight - telo.clientHeight - telo.scrollTop;
+    if (d > pros) { o.rob = (o.rob || 0) + Math.ceil(d - pros); o.back.style.setProperty('--tipk-rob', o.rob + 'px'); }
+    if (Math.abs(d) < 1) return;
+    if (gladko && !manjGibanja()) { oknoDrsi(telo, telo.scrollTop + d); return; }
+    telo._drsi = null; telo.scrollTop += d;
+  }
+  // Gladek premik seznama (puščici nad tipkovnico); brskalnikov gladki pomik iOS ob menjavi polja prekine.
+  function oknoDrsi(telo, cilj) {
+    var od = telo.scrollTop, t0 = performance.now(), dotik = _dotikT, tok = telo._drsi = {};
+    (function korak(t) {
+      if (telo._drsi !== tok || _dotikT !== dotik) return;   // nov premik ali prst na zaslonu: ustavi se
+      var p = Math.min(1, Math.max(0, (t - t0) / 320));
+      telo.scrollTop = od + (cilj - od) * OKNO_ODPRI(p);
+      if (p < 1) requestAnimationFrame(korak); else telo._drsi = null;
+    })(t0);
+  }
+  // Polje z vnosom naj bo vidno nad vrstico z gumbi, pri količinah tudi vrstici nad in pod njim.
+  function oknoPokaziPolje(el) {
+    var o = _okno; if (!o || !el || !o.telo.contains(el)) return;
+    var telo = o.telo, vr = el.closest('.ur-post') || el, r = vr.getBoundingClientRect(), t = telo.getBoundingClientRect();
+    var vrh = t.top + 8, dno = t.bottom, bar = telo.querySelector('.u-acts.nl-akc');
+    if (bar && bar.offsetParent && !bar.contains(el)) dno = Math.min(dno, bar.getBoundingClientRect().top);
+    dno -= 8;
+    var sos = function (x) { return x && x.classList && x.classList.contains('ur-post') ? x : null; };
+    var nas = vr !== el ? sos(vr.nextElementSibling) : null, pre = vr !== el ? sos(vr.previousElementSibling) : null;
+    var spodaj = nas ? nas.getBoundingClientRect().bottom : r.bottom, zgoraj = pre ? pre.getBoundingClientRect().top : r.top, d = 0;
+    if (spodaj > dno) d = spodaj - dno; else if (zgoraj < vrh) d = zgoraj - vrh;
+    if (r.top - d < vrh) d = r.top - vrh;   // vrstica z vnosom ima prednost pred sosednjima
+    if (r.bottom - d > dno) d = r.bottom - dno;
+    if (Math.abs(d) >= 1) telo.scrollTop += d;
+  }
+  document.addEventListener('focusin', function (e) {
+    var o = _okno, el = e.target, vv = window.visualViewport;
+    if (!o || o.zapiram || o.morf || !o.panel.contains(el) || !oknoTipkPolje(el)) return;
+    clearTimeout(o.tipkZapUra);
+    var tipk = o.back.classList.contains('okno-tipk');
+    // telefon: okno se skrči že ob dotiku, na pričakovano višino tipkovnice, polje gre na sredino — iOS strani ne premakne
+    if (vv && !tipk && Date.now() - _dotikT < 1500 && matchMedia('(max-width:560px) and (pointer:coarse)').matches) {   // brez dotika iOS tipkovnice ne odpre
+      var h = _tipkH[oknoTipkVrsta(el)] || _tipkH.stevilcnica || _tipkH.crke || _tipkH.stevila || Math.round(vv.height * 0.46);
+      if (vv.height - h > 200) {
+        o.tipkNapoved = true; oknoTipk(o, vv.offsetTop, vv.height - h);
+        clearTimeout(o.tipkUra); o.tipkUra = setTimeout(function () { o.tipkNapoved = false; oknoVidno(); }, 2000);   // tipkovnice ni (zunanja): nazaj
+        oknoNaSredino(o, el, false);
+        return;
+      }
+    }
+    if (tipk) oknoNaSredino(o, el, Date.now() - _dotikT > 700);   // puščici: gladko; dotik: takoj, preden polje premakne iOS
+    else oknoPokaziPolje(el);
+  });
+  if (window.visualViewport) { window.visualViewport.addEventListener('resize', oknoVidno); window.visualViewport.addEventListener('scroll', oknoVidno); }
   // Fokus na okno samo (bralnik zaslona prebere naslov okna, Tab gre na prvi gumb v njem).
   // Prej je bil na gumbu × — Safari je ob odprtju okoli njega izrisal debel obroč.
   function oknoFokus(o) { try { o.panel.focus({ preventScroll: true }); } catch (e) {} }
@@ -4682,6 +4812,7 @@
     if (!oknoNeshranjeno(o)) { if (kon) kon(); else oknoZapri(); return; }
     if (o.vsebina.querySelector('button.nalaga,[data-pv-ustvari]:disabled')) return;   // shranjevanje že teče
     o.sprasujem = true;
+    if (o.back.classList.contains('okno-tipk')) { try { document.activeElement.blur(); } catch (e) {} await new Promise(function (ok) { setTimeout(ok, 380); }); }
     var izbira = await oknoVprasaj(o);
     o.sprasujem = false;
     if (_okno !== o) return;
@@ -4693,12 +4824,16 @@
   function oknoZapri(takoj) {
     var o = _okno; if (!o || o.zapiram) return;
     o.zapiram = true;
+    var tipk = o.back.classList.contains('okno-tipk');
+    clearTimeout(o.tipkUra);
+    if (tipk) { try { document.activeElement.blur(); } catch (e) {} }
     o.back.classList.remove('okno-cel');
     document.removeEventListener('keydown', oknoTipka, true);
     if (o.ro) o.ro.disconnect();
     var k = (o.najdi && o.najdi()) || null;   // po ponovnem izrisu je kartica nov element
     var konec = function () {
       if (o.koncano) return; o.koncano = true;
+      if (tipk) oknoStranNazaj(o);
       o.back.remove();
       var v = o.vsebina;
       v.classList.remove('show'); if (o.dom.id) v.id = o.dom.id;
@@ -4719,7 +4854,14 @@
     };
     if (takoj || oknoMirno() || !o.panel.animate) { konec(); return; }
     o.back.classList.remove('show');
-    if (!k) {   // kartice ni več (izbrisana, izpadla iz filtra) → okno samo izgine
+    if (o.pojav && !tipk) {   // okno iz gumba +: odide tako, kot je prišlo (izhod pogovornih oken portala)
+      o.panel.getAnimations().forEach(function (a) { a.cancel(); });
+      oknoRobovi(o.panel, false, 220);
+      o.panel.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease', fill: 'forwards' });
+      o.panel.animate([{ transform: 'none' }, { transform: 'translate3d(0,14px,0) scale(.965)' }], { duration: 220, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' }).finished.then(konec, konec);
+      return;
+    }
+    if (!k || tipk) {   // kartice ni več (izbrisana, izpadla iz filtra) ali se zapira tipkovnica → okno samo izgine
       o.panel.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(8px) scale(.98)' }], { duration: 200, easing: 'ease', fill: 'forwards' }).finished.then(konec, konec);
       return;
     }
@@ -6039,6 +6181,7 @@
     vnosVrata(box);
     { const _os = box.querySelector('[data-org]'); if (_os) _os.addEventListener('change', async () => { await nalozArtSez(box); napolniPremade(); osveziKgPrikaz(box); }); }
     nalTrak.remove(); obrazec.style.display = ''; box.style.minHeight = '';
+    if (!manjGibanja() && obrazec.animate) obrazec.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: 'ease' });   // obrazec namesto nalagalnega traku: brez preskoka
     oknoZapomni(box);
   }
 
@@ -6284,7 +6427,8 @@
     });
     const skupine = Object.values(poOrg).sort((a, b) => (ORGIME[a.org_id] || '').localeCompare(ORGIME[b.org_id] || '', 'sl', { sensitivity: 'base' }));
     // ── cene: poveži postavke s cenikom (prek povezave artikel → cenik) ──
-    await nalozicenik();
+    // vedno sveže: cene se v živo ne osvežujejo, portal pa je lahko odprt več dni
+    await nalozicenik(true);
     const artmap = await naloziArtMap(orgIds && orgIds.length === 1 ? orgIds[0] : null);
     const cenikOn = !!(CENIK && CENIK.length);
     skupine.forEach(g => {
@@ -6297,13 +6441,15 @@
         const cena = cenaZaArtikel(s);
         const tzKos = (byId && byId.teza != null) ? byId.teza : (artmap.__teza ? artmap.__teza[key] : null);
         const teza = (tzKos != null && !isNaN(tzKos)) ? Math.round(tzKos * q * 1000) / 1000 : null;
-        return { nm, q, cena, teza, znesek: cena != null ? Math.round(cena * q * 100) / 100 : null };
+        return { nm, q, cena, teza, znesek: cena != null ? Math.round(Math.round(cena * 100) * q) / 100 : null };
       }).sort((a, b) => a.nm.localeCompare(b.nm, 'sl', { sensitivity: 'base' }));
       g.cenikOn = cenikOn;
-      g.neto = Math.round(g.postavke.reduce((sm, p) => sm + (p.znesek || 0), 0) * 100) / 100;
-      g.brezCene = g.postavke.filter(p => p.cena == null).length;
-      g.ddv = Math.round(g.neto * DDV_STOPNJA * 100) / 100;
-      g.bruto = Math.round((g.neto + g.ddv) * 100) / 100;
+      // računamo v celih centih: lebdeča vejica je pol centa kdaj zaokrožila navzdol (5,75 € → DDV 1,26 namesto 1,27 €)
+      const netoC = g.postavke.reduce((sm, p) => sm + Math.round((p.znesek || 0) * 100), 0), ddvC = Math.round(netoC * Math.round(DDV_STOPNJA * 100) / 100);
+      g.neto = netoC / 100;
+      g.ddv = ddvC / 100;
+      g.bruto = (netoC + ddvC) / 100;
+      g.brezCene = g.postavke.filter(p => !p.cena && p.q > 0).length;   // tudi cena 0 €: artikel je dan, a se ne zaračuna
       // »Skupaj kosov« bere delivery_notes.total_pieces, postavke pa so seštevek
       // delivery_note_items.pieces. Če se razideta, je račun notranje neskladen
       // (star ali nepopoln zapis). Doslej se to nikjer ni videlo — zdaj povemo.
@@ -6313,8 +6459,9 @@
     return { skupine: skupine };
   }
   // tiho: ponovno odprtje zavihka — prejšnji izris ostane brez zatemnitve, isti podatki se ne izrišejo znova (sicer vse utripne)
+  let _fakNalog = 0;
   async function nalozifakture(tiho) {
-    const list = $('fakList');
+    const list = $('fakList'), nalog = ++_fakNalog;
     const od = $('fakOd').value, doo = $('fakDo').value, orgFilter = $('fakOrg').value;
     if (!fakDatumOK(od, doo)) { list.innerHTML = '<div class="panel"><p class="u-sub">Datum »od« mora biti pred datumom »do«.</p></div>'; list._html = ''; FAK_ZADNJI = null; return; }
     // FAK_ZADNJI takoj razveljavimo: dokler se novo obdobje ne naloži, ne sme
@@ -6326,6 +6473,7 @@
     const _zatemni = tiho ? 0 : setTimeout(function () { list.style.opacity = '.45'; }, 350);
     const res = await fakZberi(od, doo, orgFilter ? [orgFilter] : null);
     clearTimeout(_zatemni);
+    if (nalog !== _fakNalog) return;   // obdobje je medtem spremenjeno: počasnejši stari odgovor ne sme prepisati novega
     list.style.opacity = '';
     if (res.error) { list.innerHTML = '<div class="panel"><p class="u-sub">Napaka: ' + escape_(res.error.message) + '</p></div>'; list._html = ''; return; }
     const skupine = res.skupine;
@@ -6366,6 +6514,16 @@
     });
   }
   function fakKg(kg) { return kg ? tezaFmt(kg) : '—'; }
+  function fakBrezCene(g) { return 'Znesek ne vsebuje artiklov brez cene: ' + stevilo(g.brezCene); }
+  function fakNeskladje(g) { return 'Seštevek postavk je ' + stevilo(g.kosovPostavke) + ' kosov, spremni listi navajajo ' + stevilo(g.kosov); }
+  // Enaka opozorila na kartici, pri tisku, v PDF-ju in Excelu. Opozorilo le na eni poti pomeni, da nekdo izvozi napačno vsoto, ne da bi vedel.
+  function fakOpozorila(g, money) {
+    var o = [];
+    if (g.neskladje) o.push(fakNeskladje(g));
+    if (money && g.brezCene) o.push(fakBrezCene(g));
+    if (g.nepotrjenih) o.push(nepotrjeniBesedilo(g.nepotrjenih));
+    return o;
+  }
   function fakKartica(g, gi) {
     const ime = ORGIME[g.org_id] || 'Brez stranke';
     const post = g.postavke || Object.entries(g.artikli).map(([nm, q]) => ({ nm, q, cena: null, znesek: null }));
@@ -6386,7 +6544,7 @@
             <div class="fak-tot-r"><span>Neto skupaj</span><b>${cenaFmt(g.neto)}</b></div>
             <div class="fak-tot-r"><span>DDV (22 %)</span><b>${cenaFmt(g.ddv)}</b></div>
             <div class="fak-tot-r fak-tot-bruto"><span>Za plačilo (z DDV)</span><b>${cenaFmt(g.bruto)}</b></div>
-            ${g.brezCene ? `<div class="fak-tot-r"><span class="fak-warn">${stevilo(g.brezCene)} artiklov brez cene — niso všteti v znesek; poveži jih v Strankah</span><b></b></div>` : ''}` : '';
+            ${g.brezCene ? `<div class="fak-tot-r"><span class="fak-warn">${fakBrezCene(g)}</span><b></b></div>` : ''}` : '';
     const povzetek = money && g.neto ? `<b>${cenaFmt(g.bruto)}</b>` : '';
     return `<div class="fak-card" data-org="${escape_(String(g.org_id || ''))}" style="${naslovnica(null, g.org_id)}" role="button" tabindex="0" aria-label="${escape_(ime)} — osnova za račun">
       <div class="fak-card-h" data-faktoggle="${gi}">
@@ -6398,7 +6556,7 @@
           ${head}
           <div class="fak-lines${money ? ' fak-lines-m' : ' fak-lines-nm'}">${rows}</div>
           <div class="fak-tot">
-            ${g.neskladje ? `<div class="fak-tot-r"><span class="fak-warn">Pozor: seštevek postavk je ${stevilo(g.kosovPostavke)} kosov, spremni listi pa navajajo ${stevilo(g.kosov)}</span><b></b></div>` : ''}
+            ${g.neskladje ? `<div class="fak-tot-r"><span class="fak-warn">${fakNeskladje(g)}</span><b></b></div>` : ''}
             <div class="fak-tot-r"><span>Skupaj kosov</span><b>${stevilo(g.kosov)}</b></div>
             <div class="fak-tot-r"><span>Skupaj teža perila</span><b>${fakKg(g.kg)}</b></div>
             ${prevoz}
@@ -6429,8 +6587,7 @@
         ? '<tr><th class="l">Naziv artikla</th><th class="r">Cena/kos</th><th class="r">Količina</th><th class="r">Znesek</th></tr>'
         : '<tr><th class="l">Naziv artikla</th><th class="r">Količina (kos)</th></tr>'}</thead><tbody>${rows}</tbody></table>
       <div class="sc-tot">${tot}</div>
-      ${g.neskladje ? `<div class="sc-pozor">Pozor: seštevek postavk je ${stevilo(g.kosovPostavke)} kosov, spremni listi pa navajajo ${stevilo(g.kosov)}.</div>` : ''}
-      ${money && g.brezCene ? `<div class="sc-pozor">Opomba: ${stevilo(g.brezCene)} artiklov še nima cene (poveži jih v razdelku Stranke). Ti niso vključeni v znesek.</div>` : ''}
+      ${fakOpozorila(g, money).map(t => `<div class="sc-pozor">${escape_(t)}</div>`).join('')}
     </section>`;
   }
   function fakDokumentHtml(skupine, od, doo, naslovDok) {
@@ -6564,8 +6721,7 @@
       y += 4 * PT; y = dpdfTabGlava(doc, y, st);
       y = dpdfTabela(doc, y, st, vrs, dpdfSestevkiVisina(sk), 'Osnova za račun · ' + (ORGIME[g.org_id] || naziv));
       y = dpdfSestevki(doc, y, sk);
-      if (g.neskladje) { y += 10 * PT; y = dpdfOdstavek(doc, y, 'Pozor: seštevek postavk je ' + stevilo(g.kosovPostavke) + ' kosov, spremni listi pa navajajo ' + stevilo(g.kosov) + '.', { size: 10 * PT, color: DPDF.POZOR }); }
-      if (money && g.brezCene) { y += 6 * PT; y = dpdfOdstavek(doc, y, 'Opomba: ' + stevilo(g.brezCene) + ' artiklov še nima cene (poveži jih v razdelku Stranke). Ti niso vključeni v znesek.', { size: 10 * PT, color: DPDF.POZOR }); }
+      fakOpozorila(g, money).forEach(function (t, i) { y += (i ? 6 : 10) * PT; y = dpdfOdstavek(doc, y, t, { size: 10 * PT, color: DPDF.POZOR }); });
     });
     pdfIzhod(doc, 'fakture_' + od + '_' + doo + '.pdf');
   }
@@ -6743,12 +6899,13 @@
     const obd = datum(od) + ' – ' + datum(doo);
     const anyMoney = skupine.some(g => g.cenikOn);
     const nd = n => escape_(String(n));
+    const kgSt = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('sl-SI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });   // kot v datoteki: stolpec je v kg, ne v t
     let povR = '';
     let sL = 0, sK = 0, sKg = 0, sN = 0, sD = 0, sB = 0;
     skupine.forEach(g => {
       const ime = ORGIME[g.org_id] || 'Brez stranke';
       sL += g.listov; sK += g.kosov; sKg += g.kg;
-      let r = '<tr><td>' + nd(ime) + '</td><td class="n">' + stevilo(g.listov) + '</td><td class="n">' + stevilo(g.kosov) + '</td><td class="n">' + nd(fakKg(g.kg)) + '</td>';
+      let r = '<tr><td>' + nd(ime) + '</td><td class="n">' + stevilo(g.listov) + '</td><td class="n">' + stevilo(g.kosov) + '</td><td class="n">' + nd(kgSt(g.kg)) + '</td>';
       if (anyMoney) {
         sN += g.neto || 0; sD += g.ddv || 0; sB += g.bruto || 0;
         r += '<td class="n">' + (g.cenikOn ? nd(cenaFmt(g.neto)) : '—') + '</td><td class="n">' + (g.cenikOn ? nd(cenaFmt(g.ddv)) : '—') + '</td><td class="n">' + (g.cenikOn ? nd(cenaFmt(g.bruto)) : '—') + '</td>';
@@ -6756,7 +6913,7 @@
       povR += r + '</tr>';
     });
     let povHead = '<tr><th>Stranka</th><th class="n">Spr. listov</th><th class="n">Kosov</th><th class="n">Teža (kg)</th>' + (anyMoney ? '<th class="n">Neto</th><th class="n">DDV</th><th class="n">Za plačilo z DDV</th>' : '') + '</tr>';
-    let povSk = '<tr class="sk"><td>SKUPAJ</td><td class="n">' + stevilo(sL) + '</td><td class="n">' + stevilo(sK) + '</td><td class="n">' + nd(fakKg(sKg)) + '</td>' + (anyMoney ? '<td class="n">' + nd(cenaFmt(sN)) + '</td><td class="n">' + nd(cenaFmt(sD)) + '</td><td class="n">' + nd(cenaFmt(sB)) + '</td>' : '') + '</tr>';
+    let povSk = '<tr class="sk"><td>SKUPAJ</td><td class="n">' + stevilo(sL) + '</td><td class="n">' + stevilo(sK) + '</td><td class="n">' + nd(kgSt(sKg)) + '</td>' + (anyMoney ? '<td class="n">' + nd(cenaFmt(sN)) + '</td><td class="n">' + nd(cenaFmt(sD)) + '</td><td class="n">' + nd(cenaFmt(sB)) + '</td>' : '') + '</tr>';
     let listi = '<div class="sheet"><div class="tab">Povzetek</div><table>' + povHead + povR + povSk + '</table></div>';
     skupine.forEach(g => {
       const ime = ORGIME[g.org_id] || 'Brez stranke';
@@ -6768,16 +6925,14 @@
         : '<tr><td>' + nd(p.nm) + '</td><td class="n">' + stevilo(p.q) + '</td></tr>').join('') : '<tr><td colspan="' + (money ? 4 : 2) + '" class="empty">Brez postavk</td></tr>';
       let tot = money
         ? '<tr class="sk"><td>Skupaj kosov</td><td class="n"></td><td class="n">' + stevilo(g.kosov) + '</td><td class="n"></td></tr>' +
-          '<tr class="sk"><td>Teža perila (kg)</td><td class="n"></td><td class="n">' + nd(fakKg(g.kg)) + '</td><td class="n"></td></tr>' +
+          '<tr class="sk"><td>Teža perila (kg)</td><td class="n"></td><td class="n">' + nd(kgSt(g.kg)) + '</td><td class="n"></td></tr>' +
           '<tr class="sk"><td>Neto skupaj</td><td class="n"></td><td class="n"></td><td class="n">' + nd(cenaFmt(g.neto)) + '</td></tr>' +
           '<tr class="sk"><td>DDV (22 %)</td><td class="n"></td><td class="n"></td><td class="n">' + nd(cenaFmt(g.ddv)) + '</td></tr>' +
           '<tr class="sk bruto"><td>Za plačilo (z DDV)</td><td class="n"></td><td class="n"></td><td class="n">' + nd(cenaFmt(g.bruto)) + '</td></tr>'
-        : '<tr class="sk"><td>Skupaj kosov</td><td class="n">' + stevilo(g.kosov) + '</td></tr><tr class="sk"><td>Teža perila (kg)</td><td class="n">' + nd(fakKg(g.kg)) + '</td></tr>';
+        : '<tr class="sk"><td>Skupaj kosov</td><td class="n">' + stevilo(g.kosov) + '</td></tr><tr class="sk"><td>Teža perila (kg)</td><td class="n">' + nd(kgSt(g.kg)) + '</td></tr>';
       // Predogled mora pokazati ISTA opozorila kot shranjena datoteka — sicer
       // uporabnik pregleda predogled, ne vidi težave, in vseeno izvozi prenizko vsoto.
-      var opoz = '';
-      if (g.neskladje) opoz += '<div class="per">Pozor: seštevek postavk je ' + stevilo(g.kosovPostavke) + ' kosov, spremni listi pa navajajo ' + stevilo(g.kosov) + '.</div>';
-      if (money && g.brezCene) opoz += '<div class="per">' + stevilo(g.brezCene) + ' artiklov brez cene (niso všteti) — poveži jih v Strankah.</div>';
+      var opoz = fakOpozorila(g, money).map(function (t) { return '<div class="per">' + nd(t) + '</div>'; }).join('');
       listi += '<div class="sheet"><div class="tab">' + nd(ime) + '</div><div class="per">Obdobje: ' + nd(obd) + '</div><table>' + head + rows + tot + '</table>' + opoz + '</div>';
     });
     return '<!DOCTYPE html><html lang="sl"><head><meta charset="utf-8"><style>' +
@@ -6797,12 +6952,7 @@
   }
   // Povzetek opozoril za eno stranko — v listu »Povzetek« se takoj vidi, pri
   // kateri stranki je z vsoto kaj narobe, brez odpiranja njenega lista.
-  function _fakOpoz(g) {
-    var o = [];
-    if (g.brezCene) o.push(stevilo(g.brezCene) + ' brez cene (niso všteti)');
-    if (g.neskladje) o.push('postavke ' + stevilo(g.kosovPostavke) + ' ≠ listi ' + stevilo(g.kosov));
-    return o.join(' · ');
-  }
+  function _fakOpoz(g) { return fakOpozorila(g, !!g.cenikOn).join(' · '); }
   function fakIzvozXlsx(od, doo, skupine) {
     const B = t => ({ v: t, bold: true });          // glava
     const T = t => ({ v: t, s: 2 });                 // krepko besedilo
@@ -6855,13 +7005,11 @@
         rows.push([T('Neto skupaj'), '', '', EURb(g.neto)]);
         rows.push([T('DDV (22 %)'), '', '', EURb(g.ddv)]);
         rows.push([T('Za plačilo (z DDV)'), '', '', EURb(g.bruto)]);
-        if (g.neskladje) rows.push([{ v: 'Pozor: seštevek postavk je ' + stevilo(g.kosovPostavke) + ' kosov, spremni listi pa navajajo ' + stevilo(g.kosov), s: 0 }]);
-        if (g.brezCene) rows.push([{ v: stevilo(g.brezCene) + ' artiklov brez cene (niso všteti) — poveži jih v Strankah', s: 0 }]);
       } else {
         rows.push([T('Skupaj kosov'), INTb(g.kosov)]);
         rows.push([T('Teža perila (kg)'), KGb(g.kg)]);
-        if (g.neskladje) rows.push([{ v: 'Pozor: seštevek postavk je ' + stevilo(g.kosovPostavke) + ' kosov, spremni listi pa navajajo ' + stevilo(g.kosov), s: 0 }]);
       }
+      fakOpozorila(g, money).forEach(function (t) { rows.push([{ v: t, s: 0 }]); });
       sheets.push({ name: ime, rows: rows });
     });
     prenesiXlsx('fakture_' + od + '_' + doo + '.xlsx', sheets);

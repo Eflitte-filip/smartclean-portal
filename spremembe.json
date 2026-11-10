@@ -1,5 +1,21 @@
 [
  {
+  "v": "4.97",
+  "d": "2026-11-10",
+  "c": "2026-11-10T22:12:00+01:00",
+  "t": [
+   "Telefon: med vpisovanjem okno ostane na mestu. Glava je vidna, vrstica, v katero pišeš, je na sredini nad tipkovnico, vrstica z gumbi pa tik nad njo.",
+   "Puščici nad tipkovnico gresta po vrsti skozi vse vrstice, nobena se ne preskoči.",
+   "Vrstica z gumbi je vedno ob spodnjem robu in ne obvisi več nad praznim prostorom.",
+   "Okna, ki jih odpre gumb + (nov spremni list, nova stranka, povabilo), pridejo kot ostala pogovorna okna portala: mirno, iz rahle pomanjšave, brez raztezanja iz gumba.",
+   "Fakture: artikli s ceno 0 € štejejo kot artikli brez cene. Opozorilo je na kartici, pri tisku, v PDF-ju in v Excelu.",
+   "Fakture vedno uporabijo najnovejše cene, tudi če je portal dolgo odprt.",
+   "Fakture: ob hitri menjavi obdobja se ne more več pokazati prejšnje obdobje.",
+   "DDV je natančno zaokrožen na cent.",
+   "Izvozi: nepotrjeni listi so navedeni tudi v PDF-ju in Excelu, predogled Excela kaže težo v kg."
+  ]
+ },
+ {
   "v": "4.96",
   "d": "2026-11-02",
   "c": "2026-11-02T11:45:00+01:00",
