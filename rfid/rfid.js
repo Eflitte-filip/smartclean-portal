@@ -479,6 +479,7 @@
     if (document.querySelector('.dk-meni')) { zapriMeni(); return; }
     var it = [['zamenjaj', 'Zamenjaj osebo'], ['tema', temaJe() === 'dark' ? 'Svetla tema' : 'Temna tema'], ['zvok', ZV.vkl ? 'Izklopi zvok' : 'Vklopi zvok'], ['varcno', rfaVarcno() ? 'Polni prikaz' : 'Varčni prikaz']];
     if (rfZadnjiListi()) it.unshift(['zadnji', 'Natisni zadnje']);
+    if (JAZ && JAZ.skrbnik && rfNfcNaVoljo()) it.push(['kartica', 'Kartica zaposlenega']);
     if (JAZ && JAZ.skrbnik && rfTiskNaVoljo()) it.push(['tiskalnik', 'Tiskalnik']);
     if (JAZ && JAZ.skrbnik && kiosk()) it.push(['naprava', 'Nastavitve naprave'], ['kiosk', 'Izklopi kiosk']);
     var m = document.createElement('div'); m.className = 'dk-meni'; m.setAttribute('role', 'menu');
@@ -497,6 +498,7 @@
         else if (b.dataset.a === 'zvok') { ZV.vkl = !ZV.vkl; LS.pisi('sc-rfa-zvok', ZV.vkl); if (ZV.vkl) zvTik(); }
         else if (b.dataset.a === 'varcno') { LS.pisi('sc-rfa-varcno', !rfaVarcno()); rfaVarcnoUporabi(); }
         else if (b.dataset.a === 'tiskalnik') rfTiskalnik();
+        else if (b.dataset.a === 'kartica') rfKartice();
         else if (b.dataset.a === 'naprava') { try { window.ScRfid.nastavitve(); } catch (e) {} }
         else if (b.dataset.a === 'kiosk') {
           potrdiModal({ naslov: 'Izklopi kiosk?', potrdi: 'Izklopi', nevarno: true }).then(function (da) { if (da) { try { window.ScRfid.kioskIzklopi(); } catch (e) {} } });
@@ -1203,6 +1205,185 @@
       } catch (e) { zvNapaka(); toast(rfTiskNapaka('')); }
     }
   }
+  /* ══════════ KARTICA ZAPOSLENEGA (NFC na hrbtu C72, le skrbnik) ══════════
+     Kartica za štemplanje brez računalnika z bralnikom in brez Raspberry Pi. Ključa TE kartice izpelje strežnik
+     (funkcija »kartica«; osnovna ključa ostaneta tam), C72 kartico vpiše enako kot terminal/sc_kartica.py in jo
+     prebere nazaj, nato se žeton shrani pri zaposlenem. Aplikacija javlja scrfid { tip: 'kartica', stanje:
+     najdena (uid, nasa) | vpisana | napaka (sporocilo, odmaknjena) | ni-desfire }. */
+  var _kartDogodek = null;
+  var IKO_KARTA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M7 14.5h4"/></svg>';
+  var RF_KART_SLIKA = '<svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<g class="rf-kart-k"><rect x="18" y="38" width="62" height="44" rx="7" stroke-width="3"/><path d="M28 68h18" stroke-width="3"/></g>' +
+    '<path class="rf-kart-val v1" d="M88 50c5 4 5 16 0 20" stroke-width="3.2"/><path class="rf-kart-val v2" d="M96 43c9 7 9 27 0 34" stroke-width="3.2"/>' +
+    '<path class="rf-kart-val v3" d="M104 36c13 10 13 38 0 48" stroke-width="3.2"/>' +
+    '<g class="rf-kart-ok"><circle cx="60" cy="60" r="34" stroke-width="3.2"/><path d="M45 61l10 10 21-22" stroke-width="4"/></g></svg>';
+  function rfNfc() { try { return window.ScRfid && typeof window.ScRfid.nfc === 'function' ? (JSON.parse(window.ScRfid.nfc()) || {}) : {}; } catch (e) { return {}; } }
+  function rfNfcNaVoljo() { return !!rfNfc().naVoljo; }
+  async function rfKartFn(telo) {
+    var r = await zRokom(sb.functions.invoke('kartica', { body: telo }), 15000);
+    if (r.error) {
+      var m = ''; try { var j = await r.error.context.json(); m = j && j.napaka; } catch (e) {}
+      throw new Error(m || (jeOmrezna(r.error) ? 'Ni povezave z internetom.' : 'Strežnik ni odgovoril.'));
+    }
+    return r.data || {};
+  }
+  function rfKartice() {
+    if (document.getElementById('rfKartOkno')) return;
+    var back = document.createElement('div'); back.className = 'sc-modal-back'; back.id = 'rfKartOkno';
+    back.innerHTML = '<div class="sc-modal rf-kart-okno" role="dialog" aria-modal="true" aria-label="Kartica zaposlenega"><h4>Kartica zaposlenega</h4>' +
+      '<div class="rf-kart-telo"></div><div class="sc-modal-acts"></div></div>';
+    document.body.appendChild(back);
+    requestAnimationFrame(function () { back.classList.add('show'); });
+    var h4 = back.querySelector('h4'), telo = back.querySelector('.rf-kart-telo'), akc = back.querySelector('.sc-modal-acts');
+    var S = { korak: '', zap: null, ljudje: null, ponovno: {}, delo: false, gen: 0, zeton: null, ura: null };
+    function gumbi(seznam) {
+      akc.innerHTML = '';
+      seznam.forEach(function (g) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'sc-modal-btn ' + (g.glavni ? 'primary' : 'ghost'); b.textContent = g.t;
+        b.addEventListener('click', g.f); akc.appendChild(b);
+      });
+      akc.hidden = !seznam.length;
+    }
+    function zapri() {
+      if (!back.isConnected) return;
+      S.gen++; clearTimeout(S.ura); _kartDogodek = null; rfMostKlic('nfcUstavi');
+      back.classList.remove('show'); back.id = ''; document.removeEventListener('keydown', tipka, true);
+      setTimeout(function () { back.remove(); }, 180);
+    }
+    // Nazaj (tipka C72 = Escape): iz prislona na seznam, s seznama zapre; med vpisom nič (kartica mora ostati prislonjena)
+    function tipka(e) {
+      if (modalOdprt() && document.querySelectorAll('.sc-modal-back').length > 1) return;   // potrditev nad oknom ima svojo tipko
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (S.delo) return; if (S.korak === 'prislon') seznam(); else zapri(); }
+      else if (e.key === 'Enter') e.preventDefault();
+    }
+    document.addEventListener('keydown', tipka, true);
+    back.addEventListener('click', function (e) { if (e.target === back && !S.delo) zapri(); });
+
+    // ── 1) seznam zaposlenih ──
+    async function seznam() {
+      S.korak = 'seznam'; S.gen++; S.zap = null; S.delo = false; clearTimeout(S.ura); rfMostKlic('nfcUstavi');
+      h4.textContent = 'Kartica zaposlenega';
+      gumbi([{ t: 'Zapri', f: zapri }]);
+      var novGumb = function () { gumbi([{ t: 'Zapri', f: zapri }, { t: 'Nov zaposleni', glavni: true, f: nov }]); };
+      if (!S.ljudje) {
+        telo.innerHTML = '<div class="sc-load rf-kart-nal" aria-hidden="true"><span class="sc-load-line"></span></div>';
+        var g = S.gen;
+        try { S.ljudje = (await rfKartFn({ dejanje: 'zaposleni' })).zaposleni || []; }
+        catch (e) {
+          if (g !== S.gen || !back.isConnected) return;
+          telo.innerHTML = '<p class="rf-kart-st napaka" role="status"></p>'; telo.firstChild.textContent = e.message;
+          gumbi([{ t: 'Zapri', f: zapri }, { t: 'Poskusi znova', glavni: true, f: function () { seznam(); } }]);
+          return;
+        }
+        if (g !== S.gen || !back.isConnected) return;
+      }
+      novGumb();
+      if (!S.ljudje.length) { telo.innerHTML = '<p class="rf-kart-st" role="status">Ni zaposlenih</p>'; return; }
+      telo.innerHTML = '<div class="rf-kart-sez">' + S.ljudje.map(function (z, i) {
+        return '<button type="button" class="rf-cit-moz" data-i="' + i + '"><span>' + esc(z.ime) + '</span>' +
+          (z.ima_kartico ? '<span class="rf-kart-ima" role="img" aria-label="Ima kartico">' + IKO_KARTA + '</span>' : '') + '</button>';
+      }).join('') + '</div>';
+      telo.querySelector('.rf-kart-sez').addEventListener('click', function (e) { var b = e.target.closest('[data-i]'); if (b) prislon(S.ljudje[+b.dataset.i]); });
+    }
+
+    // nov zaposleni: ime, nato takoj kartica
+    async function nov() {
+      var ime = await vnesiModal({ naslov: 'Nov zaposleni', placeholder: 'Ime in priimek', potrdi: 'Dodaj' });
+      if (ime == null || !back.isConnected || S.korak !== 'seznam') return;
+      ime = ime.replace(/\s+/g, ' ').trim(); if (!ime) return;
+      var g = ++S.gen;
+      gumbi([]); telo.insertAdjacentHTML('afterbegin', '<div class="sc-load rf-kart-nal" aria-hidden="true"><span class="sc-load-line"></span></div>');
+      try {
+        var z = (await rfKartFn({ dejanje: 'nov', ime: ime })).zaposleni;
+        if (g !== S.gen || !back.isConnected) return;
+        S.ljudje.push(z); S.ljudje.sort(function (a, b) { return String(a.ime).localeCompare(String(b.ime), 'sl'); });
+        prislon(z);
+      } catch (e) {
+        if (g !== S.gen || !back.isConnected) return;
+        zvNapaka(); toast(e.message); seznam();
+      }
+    }
+
+    // ── 2) prislon, vpis, shranjevanje ──
+    function stanje(st, besedilo, cls) {
+      var sl = telo.querySelector('.rf-kart-slika'), p = telo.querySelector('.rf-kart-st');
+      if (sl) sl.dataset.st = st;
+      if (p) { p.textContent = besedilo; p.className = 'rf-kart-st' + (cls ? ' ' + cls : ''); }
+    }
+    function prislon(z) {
+      S.korak = 'prislon'; S.zap = z; S.delo = false; S.gen++; clearTimeout(S.ura);
+      h4.textContent = z.ime;
+      telo.innerHTML = '<div class="rf-kart-slika" data-st="cakam">' + RF_KART_SLIKA + '</div><p class="rf-kart-st" role="status" aria-live="polite"></p>';
+      var n = rfNfc();
+      if (n.naVoljo && !n.vklopljen) {
+        stanje('napaka', 'NFC je izklopljen', 'napaka');
+        gumbi([{ t: 'Nazaj', f: seznam }, { t: 'Vklopi NFC', glavni: true, f: function () { rfMostKlic('nfcNastavitve'); } }]);
+        var g = S.gen;
+        S.ura = setTimeout(function nfcCakaj() { if (g !== S.gen || !back.isConnected) return; if (rfNfc().vklopljen) prislon(z); else S.ura = setTimeout(nfcCakaj, 1000); }, 1000);
+        return;
+      }
+      stanje('cakam', 'Prisloni kartico na hrbet naprave');
+      gumbi([{ t: 'Nazaj', f: seznam }]);
+      rfMostKlic('nfcZacni');
+    }
+    async function vpisi(uid, ponovno) {
+      var g = ++S.gen; S.delo = true; S.zeton = null; clearTimeout(S.ura);
+      stanje('vpisujem', 'Vpisujem …');
+      gumbi([]);
+      try {
+        var k = await rfKartFn({ dejanje: 'kljuci', uid: uid });
+        if (g !== S.gen) return;
+        S.zeton = k.zeton;
+        rfMostKlic('karticaVpisi', JSON.stringify({ uid: uid, glavni: k.glavni, bralni: k.bralni, zeton: k.zeton, ponovno: !!ponovno }));
+        S.ura = setTimeout(function () { if (g === S.gen && S.delo) neuspeh('Vpis ni uspel — prisloni kartico znova'); }, 20000);
+      } catch (e) { if (g === S.gen) neuspeh(e.message); }
+    }
+    function neuspeh(besedilo) {
+      clearTimeout(S.ura); S.delo = false; S.gen++;
+      zvNapaka();
+      stanje('napaka', besedilo, 'napaka');
+      gumbi([{ t: 'Nazaj', f: seznam }]);
+    }
+    async function dodeli() {
+      var g = ++S.gen;
+      stanje('vpisujem', 'Shranjujem …'); gumbi([]);
+      try {
+        await rfKartFn({ dejanje: 'dodeli', emp_id: S.zap.id, zeton: S.zeton });
+        if (g !== S.gen) return;
+        S.delo = false; S.zap.ima_kartico = true; rfMostKlic('nfcUstavi');
+        zvUspeh();
+        stanje('ok', 'Kartica je vpisana', 'ok');
+        gumbi([{ t: 'Nazaj', f: seznam }, { t: 'Končano', glavni: true, f: zapri }]);
+      } catch (e) {
+        if (g !== S.gen) return;
+        zvNapaka();
+        stanje('napaka', e.message, 'napaka');   // kartica je vpisana, žeton še ni shranjen: ponovi le shranjevanje
+        gumbi([{ t: 'Poskusi znova', glavni: true, f: dodeli }]);
+      }
+    }
+    _kartDogodek = function (d) {
+      if (S.korak !== 'prislon' || !back.isConnected) return;
+      if (d.stanje === 'najdena' && !S.delo) {
+        if (d.nasa && !S.ponovno[d.uid]) {
+          S.delo = true;
+          potrdiModal({ naslov: 'Kartica je že vpisana', sporocilo: 'Vpišem jo za ' + S.zap.ime + '? Kdor jo ima zdaj, z njo ne bo več štemplal.', potrdi: 'Vpiši', nevarno: true }).then(function (da) {
+            S.delo = false; if (S.korak !== 'prislon' || !back.isConnected) return;
+            if (da) { S.ponovno[d.uid] = true; vpisi(d.uid, true); }
+          });
+          return;
+        }
+        vpisi(d.uid, !!d.nasa || !!S.ponovno[d.uid]);
+      } else if (d.stanje === 'ni-desfire' && !S.delo) {
+        zvNapaka(); stanje('napaka', 'To ni kartica za štemplanje', 'napaka');
+      } else if (d.stanje === 'vpisana' && S.delo && S.zeton) {
+        clearTimeout(S.ura); dodeli();
+      } else if (d.stanje === 'napaka' && S.delo) {
+        if (d.uid) S.ponovno[d.uid] = true;   // napol vpisana kartica: naslednji prislon jo prepiše brez vprašanja
+        neuspeh(d.odmaknjena ? 'Kartica je bila odmaknjena — prisloni jo znova' : (d.sporocilo || 'Vpis ni uspel'));
+      }
+    };
+    seznam();
+  }
   function natisniPrekIframe(doc) {
     var star = $('rfaTisk'); if (star) star.remove();
     var ifr = document.createElement('iframe'); ifr.id = 'rfaTisk'; ifr.setAttribute('aria-hidden', 'true');
@@ -1367,6 +1548,7 @@
         if (d.bere && !prej.bere && RF.rezultat && !$('app').hidden && !modalOdprt()) { RF.rezultat = null; rfRisi(); }   // nov pritisk po ustvarjenih listih = novo skeniranje
       } else if (d.tip === 'epc' && Array.isArray(d.epc)) { if (RF.ustaviOdstevanje) RF.ustaviOdstevanje(); rfMostEpci(d.epc); }
       else if (d.tip === 'tisk' && _tiskIzid) _tiskIzid(d);
+      else if (d.tip === 'kartica' && _kartDogodek) _kartDogodek(d);
     });
     rfMocNastavi(rfMocNacin());
   }
@@ -1399,7 +1581,7 @@
   /* ══════════ NOVA RAZLIČICA ══════════
      C72 je lahko odprt ves dan: ko je objavljena nova različica, se aplikacija naloži znova, a le, ko miruje
      (brez skeniranja, okna, rezultata in branja) — nič se ne izgubi. */
-  var RF_VER = '4.97';   // ob objavi enako kot APP_VERZIJA v portalu (prvi »v« v spremembe.json)
+  var RF_VER = '4.98';   // ob objavi enako kot APP_VERZIJA v portalu (prvi »v« v spremembe.json)
   async function rfPreveriRazlicico() {
     try {
       var r = await _izvFetch('../spremembe.json?v=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;

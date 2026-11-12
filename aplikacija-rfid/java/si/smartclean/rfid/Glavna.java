@@ -75,6 +75,7 @@ public class Glavna extends Activity implements Bralnik.Poslusalec {
     private WebView tisk;       // okno za tisk živi, dokler ga ne zamenja naslednji tisk (sicer ga lahko pobere zbiralnik smeti)
     private boolean tiskam;     // odprt je sistemski dialog za tisk: časovnikov oken ne ustavljaj (predogled bi obstal)
     private Tiskalnik tiskalnik;   // neposreden tisk na omrežni tiskalnik
+    private Nfc nfc;               // kartice zaposlenih (DESFire) — vpis s C72, le skrbnik
 
     @Override
     protected void onCreate(Bundle shranjeno) {
@@ -83,6 +84,7 @@ public class Glavna extends Activity implements Bralnik.Poslusalec {
         try { ton = new ToneGenerator(AudioManager.STREAM_MUSIC, 60); } catch (Exception e) { ton = null; }
         bralnik = new Bralnik(this, this);
         tiskalnik = new Tiskalnik(this);
+        nfc = new Nfc(this, json -> ui.post(() -> { if (!isDestroyed()) dogodek(json); }));
         dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
         skrbnik = new ComponentName(this, Skrbnik.class);
         kioskNastavi();
@@ -172,9 +174,11 @@ public class Glavna extends Activity implements Bralnik.Poslusalec {
         if (web != null) { web.onResume(); web.resumeTimers(); }
         kioskNastavi();   // tudi, če je bila naprava nastavljena za kiosk, ko je aplikacija že tekla
         zaklepni();       // tudi po vrnitvi iz nastavitev naprave
+        if (nfc != null) nfc.nadaljuj();   // branje kartic deluje le v ospredju
     }
     @Override protected void onPause() {
         bralnik.ustavi();   // branje ne teče naprej v ozadju (baterija, 1 W)
+        if (nfc != null) nfc.premor();
         if (web != null) { web.onPause(); if (!tiskam) web.pauseTimers(); }
         super.onPause();
     }
@@ -185,6 +189,7 @@ public class Glavna extends Activity implements Bralnik.Poslusalec {
         if (omrezje != null) { try { ((ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE)).unregisterNetworkCallback(omrezje); } catch (Exception ignored) { } }
         bralnik.konec();
         tiskalnik.ustavi();
+        if (nfc != null) nfc.konec();
         if (ton != null) { ton.release(); ton = null; }
         if (web != null) { web.destroy(); web = null; }
         if (tisk != null) { tisk.destroy(); tisk = null; }
@@ -240,6 +245,13 @@ public class Glavna extends Activity implements Bralnik.Poslusalec {
     private void nastavitveNaprave() {
         try { if (kiosk()) stopLockTask(); } catch (Exception ignored) { }
         try { startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
+    }
+
+    // NFC je izklopljen: odpri njegove nastavitve (v kiosku zaklep za ta čas izklopi, ob vrnitvi se vključi znova)
+    private void nfcNastavitve() {
+        try { if (kiosk()) stopLockTask(); } catch (Exception ignored) { }
+        try { startActivity(new Intent(Settings.ACTION_NFC_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
+        catch (Exception e) { nastavitveNaprave(); }
     }
 
     // »Izklopi kiosk« (le skrbnik): naprava spet navadna (sicer le ponastavitev na tovarniške nastavitve)
@@ -388,5 +400,11 @@ public class Glavna extends Activity implements Bralnik.Poslusalec {
         @JavascriptInterface public boolean kiosk() { return mostDovoljen() && Glavna.this.kiosk(); }
         @JavascriptInterface public void nastavitve() { if (mostDovoljen()) ui.post(Glavna.this::nastavitveNaprave); }
         @JavascriptInterface public void kioskIzklopi() { if (mostDovoljen()) ui.post(Glavna.this::kioskIzklopi); }
+        // kartice zaposlenih (NFC): stanje, branje, vpis — dogodki »scrfid« s tip = "kartica"
+        @JavascriptInterface public String nfc() { return mostDovoljen() ? nfc.stanjeJson() : "{}"; }
+        @JavascriptInterface public void nfcZacni() { if (mostDovoljen()) ui.post(nfc::zacni); }
+        @JavascriptInterface public void nfcUstavi() { if (mostDovoljen()) ui.post(nfc::ustavi); }
+        @JavascriptInterface public void nfcNastavitve() { if (mostDovoljen()) ui.post(Glavna.this::nfcNastavitve); }
+        @JavascriptInterface public void karticaVpisi(String json) { if (mostDovoljen()) nfc.vpisi(json); }
     }
 }

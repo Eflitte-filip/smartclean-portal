@@ -104,3 +104,32 @@ html.rfa,html.rfa body{background:var(--bg);}
 .rfa .rf-tisk-st{margin:12px 0 0;font-size:var(--fs-13);color:var(--mid);}
 .rfa .rf-tisk-st:empty{display:none;}
 
+
+/* ── kartica zaposlenega (NFC na hrbtu C72, le skrbnik) ── */
+.rfa .rf-kart-okno{max-width:400px;}
+.rfa .rf-kart-okno:focus{outline:none;}
+.rfa .rf-kart-sez{display:flex;flex-direction:column;gap:8px;margin:8px 0 14px;max-height:calc(100vh - 240px);max-height:calc(100dvh - 240px);overflow-y:auto;}
+.rfa .rf-kart-sez .rf-cit-moz > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rfa .rf-kart-ima{display:inline-flex;flex:0 0 auto;color:var(--mid);}
+.rfa .rf-kart-ima svg{width:22px;height:22px;}
+.rfa .rf-kart-nal{margin:10px 0 14px;}
+.rfa .rf-kart-slika{display:grid;place-items:center;height:156px;margin:4px 0 2px;color:var(--ink);}
+.rfa .rf-kart-slika svg{width:132px;height:132px;overflow:visible;}
+.rfa .rf-kart-slika .rf-kart-ok{opacity:0;}
+/* čakanje na kartico: valovi zaporedoma (stanje, zato tudi v varčnem prikazu in z zmanjšanim gibanjem) */
+.rfa .rf-kart-slika[data-st="cakam"] .rf-kart-val{animation:rfKartVal 1.5s ease-in-out infinite!important;}
+.rfa .rf-kart-slika[data-st="cakam"] .rf-kart-val.v2{animation-delay:.18s!important;}
+.rfa .rf-kart-slika[data-st="cakam"] .rf-kart-val.v3{animation-delay:.36s!important;}
+@keyframes rfKartVal{0%,100%{opacity:.18;}40%{opacity:1;}}
+.rfa .rf-kart-slika[data-st="vpisujem"] .rf-kart-val{opacity:.25;}
+.rfa .rf-kart-slika[data-st="vpisujem"] .rf-kart-k{animation:nalagaPulz .7s ease-in-out infinite alternate!important;}
+.rfa .rf-kart-slika[data-st="napaka"]{color:var(--st-warn-ink);}
+.rfa .rf-kart-slika[data-st="napaka"] .rf-kart-val{opacity:.3;}
+.rfa .rf-kart-slika[data-st="ok"]{color:var(--st-ok-ink);}
+.rfa .rf-kart-slika[data-st="ok"] :is(.rf-kart-k,.rf-kart-val){opacity:0;}
+.rfa .rf-kart-slika[data-st="ok"] .rf-kart-ok{opacity:1;transform-origin:60px 60px;animation:rfKartOk .5s var(--gib) both;}
+@keyframes rfKartOk{from{opacity:0;transform:scale(.86);}to{opacity:1;transform:none;}}
+.rfa .rf-kart-st{min-height:1.4em;margin:6px 0 16px;text-align:center;font-size:var(--fs-15);font-weight:500;color:var(--mid);}
+.rfa .rf-kart-st.napaka{color:var(--st-warn-ink);}
+.rfa .rf-kart-st.ok{color:var(--st-ok-ink);}
+.rfa .rf-kart-okno .sc-modal-acts .sc-modal-btn{flex:1 1 auto;}

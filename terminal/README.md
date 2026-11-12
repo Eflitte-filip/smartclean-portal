@@ -129,6 +129,23 @@ chmod 600 ~/terminal/terminal.json
 
 ## 5) Vpis kartic
 
+### S C72 (brez računalnika in brez Pi-ja)
+
+Na C72 se prijavi kot skrbnik → meni osebe → **Kartica zaposlenega** → izberi osebo (ali
+**Nov zaposleni**) → prisloni kartico na hrbet naprave. Kartica je vpisana, prebrana nazaj in
+dodeljena; Pi je takoj sprejme.
+
+Kako: funkcija `kartica` (Supabase) iz osnovnih ključev in UID izpelje ključa TE kartice in izda
+žeton; C72 (aplikacija 1.8+, `aplikacija-rfid/.../Kartica.java`) kartico vpiše enako kot
+`vpisi_karto.py` in jo prebere z bralnim ključem kot terminal. Osnovna ključa sta v skrivnostih
+funkcije (`KARTICA_APP_MASTER`, `KARTICA_READ` — vrednosti iz `kljuci.json`), na C72 nista nikoli.
+
+Enkratna nastavitev: objavi `supabase/functions/kartica` (Verify JWT vklopljen) in vpiši obe
+skrivnosti. Preizkus brez kartice: `smartclean-preizkus/kartica` (simulator DESFire, preverjen s
+knjižnico python-desfire; vsako kartico, ki jo vpiše C72, prebere koda terminala).
+
+### Z računalnikom in bralnikom
+
 Na svojem računalniku, z bralnikom priklopljenim nanj:
 
 ```bash

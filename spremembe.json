@@ -1,5 +1,16 @@
 [
  {
+  "v": "4.98",
+  "d": "2026-11-12",
+  "c": "2026-11-12T19:00:00+01:00",
+  "t": [
+   "Kartica za štemplanje se vpiše kar s C72: skrbnik v meniju izbere Kartica zaposlenega, izbere osebo ali doda novega zaposlenega in prisloni kartico na hrbet naprave. Računalnik z bralnikom in Raspberry Pi pri tem nista potrebna.",
+   "Že vpisano kartico C72 prepiše šele po potrditvi. Če kartico odmakneš sredi vpisa, jo naslednji prislon vpiše do konca.",
+   "Dnevnik sprememb zdaj res beleži spremembe — prej je baza vsak vpis zavrnila.",
+   "Aplikacija za C72 1.8."
+  ]
+ },
+ {
   "v": "4.97",
   "d": "2026-11-10",
   "c": "2026-11-10T22:12:00+01:00",
