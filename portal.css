@@ -2703,15 +2703,24 @@ html[data-theme="dark"] .doc-stage{background:color-mix(in srgb,var(--ink) 6%,va
 .v5[data-view="list"] .lcell :is(.row,.a-row){border-radius:var(--radius);}
 
 /* ── Fakture: kg levo, znesek desno v nogi (mreža) ali desno ob naslovu (seznam) ── */
-.v5 .fak-noga{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0;font-size:var(--fs-13);color:var(--mid);font-variant-numeric:tabular-nums;}
-.v5 .fak-noga b{font-weight:500;color:var(--ink);}
+/* fakture: siva vrstica (listi · kosi · teža) + ENO glavno število z oznako (znesek z DDV); deli vrstice se ne lomijo sredi */
+/* ločilo pred vsakim delom; vrstica je zamaknjena za širino ločila in to širino obreže — ločilo na začetku vrstice se ne vidi */
+.v5 .fak-card .fak-card-info .fak-meta{display:flex!important;flex-wrap:wrap;margin-left:calc(-1 * var(--fm-l,15px))!important;clip-path:inset(-4px -4px -4px var(--fm-l,15px));}
+.v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-card-info .u-sub.fak-meta{margin-left:calc(-1 * var(--fm-l,15px))!important;}
+.v5 .fak-meta > span{white-space:nowrap;}
+.v5 .fak-meta > span::before{content:"·";display:inline-block;width:var(--fm-l,15px);text-align:center;}
+.v5 .fak-noga{display:flex;align-items:baseline;justify-content:flex-start;gap:6px;margin:0;font-size:var(--fs-13);color:var(--mid);font-variant-numeric:tabular-nums;}
+.v5 .fak-noga b{font-weight:500;color:var(--ink);white-space:nowrap;}
+.v5 .fak-noga > span{font-size:var(--fs-13);font-weight:400;color:var(--mid);white-space:nowrap;}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-card-h{flex:1 1 auto;}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-card-info{display:flex;flex-direction:column;gap:3px;flex:1 1 auto;}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-noga{margin-top:auto;padding-top:14px;}
 .v5[data-view="list"] .fak-card .fak-card-info{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"t n" "s n";column-gap:20px;row-gap:3px;align-items:center;}
 .v5[data-view="list"] .fak-card .fak-card-info h3{grid-area:t;font-size:var(--fs-16);font-weight:500;letter-spacing:-.01em;}
 .v5[data-view="list"] .fak-card .fak-card-info .u-sub{grid-area:s;font-size:var(--fs-13);}
-.v5[data-view="list"] .fak-card .fak-noga{grid-area:n;gap:18px;}
+.v5[data-view="list"] .fak-card .fak-noga{grid-area:n;flex-direction:column;align-items:flex-end;gap:1px;text-align:right;}
+.v5[data-view="list"] .fak-card .fak-noga b{font-size:var(--fs-16);letter-spacing:-.01em;}
+.v5[data-view="list"] .fak-card .fak-noga > span{font-size:var(--fs-12);}
 .v5 :is(input[type=email],input[type=password],.field input[type=text],.field input[type=tel],.field input[type=email],.field input[type=number],.sc-modal-input,.pris-new,.adm-ime){height:var(--ctrl-h);}
 .v5 .main .btn{font-size:var(--fs-14);}
 /* kontrole v glavi kartice (36): izbirniki in datum */
@@ -3024,7 +3033,14 @@ html.sc-sam{--vrh:max(12px,env(safe-area-inset-top));}
 /* fakture: naslovnica (stranka) → listi · kosi → kg in znesek */
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-card-h{display:block!important;}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-card-info{display:flex;flex-direction:column;gap:0;}
-.v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-noga{display:flex;justify-content:space-between;gap:10px;padding:0!important;border:0!important;}
+.v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-noga{display:flex;justify-content:flex-start;align-items:baseline;flex-wrap:wrap;gap:0 6px;padding:0!important;border:0!important;}
+.v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-noga b{font-size:var(--fs-17);letter-spacing:-.015em;}
+
+/* prisotnost v mreži: naslovnica (ime; barva = stanje) → ure danes → stanje › ; v seznamu ostane strnjena vrstica */
+html[data-view] .pz-mreza .row .num::before{content:none;}
+.v5[data-view="grid"] .pz-mreza .lcell:not(.open) .row .num{grid-column:1 / -1;}
+.v5[data-view="grid"] .pz-mreza .lcell.pris-neakt:not(.open) .row{opacity:1;}
+.v5[data-view="grid"] .pz-mreza .lcell.pris-neakt:not(.open) .row .row-name{filter:grayscale(1);opacity:.7;}
 
 /* seznam: oznaka cenika ob nazivu stranke z barvno piko (ista barva kot naslovnica v mreži) */
 .v5:not([data-view="grid"]) .lcell .row .row-cenik,.v5 .lcell.open .row .row-cenik{display:flex;align-items:center;gap:6px;margin:3px 0 0;font-size:var(--fs-12);color:var(--mid);white-space:nowrap;}

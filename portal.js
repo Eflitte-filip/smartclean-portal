@@ -146,7 +146,12 @@
 
   /* ── pogled: seznam / mreža (Arhiv, Fakture, Ceniki, Stranke) ─────── */
   function pogledPref() { try { return localStorage.getItem('sc-view') === 'grid' ? 'grid' : 'list'; } catch (e) { return 'list'; } }
-  function uporabiPogled() { document.documentElement.dataset.view = pogledPref(); }
+  function uporabiPogled() {
+    var de = document.documentElement, prej = de.dataset.view, v = pogledPref();
+    de.dataset.view = v;
+    // Prisotnost ima v mreži drugačno zgradbo kartic (naslovnica) kot strnjen seznam → ob preklopu jo izriši znova
+    if (prej && prej !== v) { var pl = document.getElementById('prisList'); if (pl && pl.querySelector('.pris-zap')) prisRender(); }
+  }
   function osveziPogledSege() {
     const v = pogledPref();
     document.querySelectorAll('.pogled-seg').forEach(seg => seg.querySelectorAll('.seg-b').forEach(b => b.classList.toggle('on', b.dataset.view === v)));
@@ -804,7 +809,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.00 · BETA';
+  var APP_VERZIJA = '5.01 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -2501,6 +2506,7 @@
     var danesD = danes10();
     var zapUrejeni = (ZAPOSLENI || []).slice().sort(function (a, b) { return (b.active ? 1 : 0) - (a.active ? 1 : 0); });   // aktivni najprej; sicer vrstni red ostane
     var prisotnihN = 0;
+    var zapMreza = pogledPref() === 'grid';
     var zapKartice = zapUrejeni.map(function (z, i) {
       var l = prisZadnji(z.id); var notri = !!(z.active && l && l.type === 'in');
       // prihod s prejšnjega dne brez odhoda: ni »prisoten«, ampak pozabljena odjava (prej »od 06:30«, kot da je tu zdaj)
@@ -2528,6 +2534,16 @@
           '<button type="button" class="cgrp-btn ghost" data-aktiv="' + z.id + '" data-v="' + (z.active ? '0' : '1') + '">' + (z.active ? 'Deaktiviraj' : 'Aktiviraj') + '</button>' +
           '<button type="button" class="cgrp-btn danger" data-izbrisi="' + z.id + '">Izbriši</button>' +
         '</div>';
+      // Mreža: naslovnica z imenom (zelena = prisoten, oranžna = ni odhoda, siva = odsoten/neaktiven) → ure danes → stanje
+      if (zapMreza) {
+        var barva = !z.active ? null : brezOdhoda ? BARVE_STANJA.yellow : notri ? BARVE_STANJA.green : null;
+        var stanje = !z.active ? 'Neaktiven' : brezOdhoda ? 'Ni odhoda · ' + odhodTxt.replace(/^ni odhoda · /, '') : notri ? 'Prisoten od ' + uraMin(l.ts) : 'Odsoten';
+        var danesTxt = 'danes ' + (danUre || (notri && !brezOdhoda ? 'v teku' : 'ni vpisov'));
+        return '<div class="lcell pz-cell' + (z.active ? '' : ' pris-neakt') + '"><button class="row pz" type="button" data-zid="' + z.id + '" aria-haspopup="dialog" title="' + escape_(pod) + '" style="' + naslovnica(barva, z.id) + '">' +
+          '<span><span class="row-name"><span class="row-nm">' + escape_(z.ime) + '</span></span><span class="row-legal">' + escape_(stanje) + '</span></span>' +
+          '<span class="num pris-zap-ure">' + escape_(danesTxt) + '</span><span class="chev" aria-hidden="true">›</span></button>' +
+          '<div class="arts pris-zap-det">' + det + '</div></div>';
+      }
       // ENA vrstica na zaposlenega: ime · stanje · ure danes (prej tri: ime, kartica, značka —
       // do mesečne evidence je bilo treba dolgo drseti). Kartica in uporabnik sta v oknu.
       var stKr = !z.active ? '<span class="pz-st off">neaktiven</span>' : (brezOdhoda ? '<span class="pz-st warn">' + odhodTxt + '</span>' : notri ? '<span class="pz-st in">od ' + uraMin(l.ts) + '</span>' : '<span class="pz-st">odsoten</span>');
@@ -2539,7 +2555,7 @@
     var aktivnihN = aktivni.length;
     var blok1 = '<div class="pris-card pris-zap-card"><div class="pris-h"><h3 class="sec-h">Zaposleni</h3>' +
       '<span class="pris-count" title="Prisotni / aktivni">' + prisotnihN + ' / ' + aktivnihN + ' prisotnih</span></div>' +
-      (zapKartice ? '<div class="pris-zap pz-seznam">' + zapKartice + '</div>' : '<p class="u-sub" style="padding:10px 2px">Še ni zaposlenih.</p>') +
+      (zapKartice ? '<div class="pris-zap ' + (zapMreza ? 'rows pz-mreza' : 'pz-seznam') + '">' + zapKartice + '</div>' : '<p class="u-sub" style="padding:10px 2px">Še ni zaposlenih.</p>') +
       '<div class="pris-add"><input type="text" class="pris-new" placeholder="Ime in priimek"><button type="button" class="cgrp-btn pris-add-btn">' + IKO_T_PLUS + 'Dodaj</button></div></div>';
 
     // ── Blok 2: evidenca (dan/mesec/oseba) ──
@@ -6460,7 +6476,8 @@
   function fakGlavaOkna(k) {
     var d = document.createElement('div');
     var h = k && k.querySelector('.fak-card-info h3'), p = k && k.querySelector('.fak-card-info .u-sub'), n = k && k.querySelector('.fak-card-info .fak-noga');
-    var deli = [p ? p.innerHTML : ''].concat(n ? [].map.call(n.children, function (x) { return x.innerHTML; }) : []).filter(Boolean);
+    var deli = (p ? [].map.call(p.children.length ? p.children : [p], function (x) { return x.textContent; }) : []).concat(n ? [n.textContent.replace(/\s+/g, ' ').trim()] : [])
+      .filter(Boolean).map(escape_);
     d.innerHTML = '<h3 class="sec-h">' + escape_(h ? h.textContent : '') + '</h3><div class="okno-glava-sub">' + deli.join(' · ') + '</div>';   // naše oznake (escape_ že uporabljen)
     return d;
   }
@@ -6505,10 +6522,14 @@
             <div class="fak-tot-r"><span>DDV (22 %)</span><b>${cenaFmt(g.ddv)}</b></div>
             <div class="fak-tot-r fak-tot-bruto"><span>Za plačilo (z DDV)</span><b>${cenaFmt(g.bruto)}</b></div>
             ${g.brezCene ? `<div class="fak-tot-r"><span class="fak-warn">${fakBrezCene(g)}</span><b></b></div>` : ''}` : '';
-    const povzetek = money && g.neto ? `<b>${cenaFmt(g.bruto)}</b>` : '';
+    // Pod imenom: ena siva vrstica (listi · kosi · teža) in ENO glavno število z oznako — znesek z DDV
+    // (brez cenika: kosi). Prej sta bili teža in znesek enako veliki drug ob drugem in brez oznake, »—« za manjkajočo težo.
+    const meta = [sklonListov(g.listov)].concat(money ? [sklonKosov(g.kosov)] : []).concat(g.kg ? [tezaFmt(g.kg)] : [])
+      .concat(g.izredni ? [stevilo(g.izredni) + '× izredni prevoz'] : []).map(t => '<span>' + t + '</span>').join('');   // ločila » · « nariše CSS (na začetku vrstice skrita)
+    const glavno = money ? `<b>${cenaFmt(g.bruto)}</b> <span>z DDV</span>` : `<b>${sklonKosov(g.kosov)}</b>`;
     return `<div class="fak-card" data-org="${escape_(String(g.org_id || ''))}" style="${naslovnica(null, g.org_id)}" role="button" tabindex="0" aria-label="${escape_(ime)} — osnova za račun">
       <div class="fak-card-h" data-faktoggle="${gi}">
-        <div class="fak-card-info"><h3>${escape_(ime)}</h3><p class="u-sub">${sklonListov(g.listov)} · ${sklonKosov(g.kosov)}${g.izredni ? ' · ' + stevilo(g.izredni) + '× izredni prevoz' : ''}</p><p class="fak-noga"><span>${fakKg(g.kg)}</span>${povzetek}</p></div>
+        <div class="fak-card-info"><h3>${escape_(ime)}</h3><p class="u-sub fak-meta">${meta}</p><p class="fak-noga">${glavno}</p></div>
         <span class="fak-chev" aria-hidden="true">›</span>
       </div>
       <div class="fak-body" id="fakbody${gi}">
