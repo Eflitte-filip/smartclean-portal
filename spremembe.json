@@ -1,5 +1,15 @@
 [
  {
+  "v": "5.05",
+  "d": "2026-11-13",
+  "c": "2026-11-13T13:44:46+01:00",
+  "t": [
+   "Čipi so zdaj »Perilo«: kartice strank s perilom s čipi, na vsaki število kosov in pogrešani. Iščeš lahko stranko ali del številke čipa (npr. kot ga pokaže C72).",
+   "Okno stranke pokaže, kje je perilo (pri stranki, v pralnici, pogrešano), pod tem so pogrešani, artikli ter izgubljeni in odpisani kosi. Skupina se razpre v kose, klik na kos pokaže zgodovino in dejanja. Okno ostane odprto, ko kos označiš kot izgubljen ali odpisan.",
+   "Stranke → Perilo s čipi → »Odpri v Perilu« odpre okno te stranke."
+  ]
+ },
+ {
   "v": "5.04",
   "d": "2026-11-13",
   "c": "2026-11-13T13:35:03+01:00",
