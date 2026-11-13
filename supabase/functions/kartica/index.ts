@@ -71,22 +71,32 @@ async function obravnavaj(req: Request): Promise<Response> {
     return odgovor({ napaka: "Napačna zahteva." }, 400);
   }
 
+  // Terminal (punch) sprejme kartico le aktivnemu zaposlenemu v organizaciji terminala: na C72 je mogoče izbrati
+  // le take, nov zaposleni dobi organizacijo terminala, shranjevanje to še enkrat preveri.
+  const { data: terminali, error: napakaTerm } = await admin.from("att_terminals").select("org_id").eq("active", true);
+  if (napakaTerm) throw napakaTerm;
+  const orgTerminala = [...new Set((terminali ?? []).map((t: { org_id: string | null }) => t.org_id).filter((x): x is string => !!x))];
+
   switch (telo.dejanje) {
     case "zaposleni": {
-      const { data, error } = await admin.from("employees").select("id,ime,ima_kartico").eq("active", true).order("ime");
+      let q = admin.from("employees").select("id,ime,ima_kartico").eq("active", true);
+      if (orgTerminala.length) q = q.in("org_id", orgTerminala);
+      const { data, error } = await q.order("ime");
       if (error) throw error;
       return odgovor({ zaposleni: data ?? [] });
     }
 
     case "nov": {
-      // nov zaposleni (enako kot portal → Prisotnost: organizacija obstoječih zaposlenih)
+      // nov zaposleni: organizacija terminala (sicer obstoječih zaposlenih, kot portal → Prisotnost)
       const ime = String(telo.ime ?? "").replace(/\s+/g, " ").trim();
       if (ime.length < 2 || ime.length > 80) return odgovor({ napaka: "Vpiši ime in priimek." }, 400);
       const { data: isti } = await admin.from("employees").select("id").eq("active", true).ilike("ime", ime.replace(/[%_\\]/g, "\\$&")).limit(1);
       if (isti && isti.length) return odgovor({ napaka: "Zaposleni s tem imenom že obstaja." }, 409);
-      let org: string | null = null;
-      const { data: obst } = await admin.from("employees").select("org_id").not("org_id", "is", null).limit(1);
-      if (obst && obst.length) org = obst[0].org_id;
+      let org: string | null = orgTerminala[0] ?? null;
+      if (!org) {
+        const { data: obst } = await admin.from("employees").select("org_id").not("org_id", "is", null).limit(1);
+        if (obst && obst.length) org = obst[0].org_id;
+      }
       if (!org) {
         const { data: o } = await admin.from("orgs").select("id").is("deleted_at", null).order("sort_order", { nullsFirst: false }).order("name").limit(1);
         if (o && o.length) org = o[0].id;
@@ -121,6 +131,12 @@ async function obravnavaj(req: Request): Promise<Response> {
       const zeton = String(telo.zeton ?? "").toUpperCase();
       if (!/^[0-9A-F]{32}$/.test(zeton) || !zetonBerljiv(izHex(zeton))) return odgovor({ napaka: "Neveljaven žeton." }, 400);
       if (!/^[0-9a-f-]{36}$/i.test(empId)) return odgovor({ napaka: "Neveljaven zaposleni." }, 400);
+      const { data: zap } = await admin.from("employees").select("active,org_id").eq("id", empId).maybeSingle();
+      if (!zap) return odgovor({ napaka: "Zaposlenega ni." }, 404);
+      if (!zap.active) return odgovor({ napaka: "Zaposleni ni aktiven — terminal ga ne bi sprejel." }, 409);
+      if (orgTerminala.length && !orgTerminala.includes(zap.org_id)) {
+        return odgovor({ napaka: "Zaposleni ni v organizaciji terminala — terminal ga ne bi sprejel." }, 409);
+      }
       const { data, error } = await admin.from("employees").update({ card_token: zeton }).eq("id", empId).select("id,ime");
       if (error) {
         if ((error.message ?? "").includes("employees_card_token_key")) return odgovor({ napaka: "Ta kartica je že dodeljena drugemu zaposlenemu." }, 409);
