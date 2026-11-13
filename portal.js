@@ -804,7 +804,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '4.98 · BETA';
+  var APP_VERZIJA = '4.99 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -2126,7 +2126,6 @@
     if (ZAPOSLENI && ZAPOSLENI.length && ZAPOSLENI[0].org_id) return ZAPOSLENI[0].org_id;
     return (ORGSEZNAM && ORGSEZNAM[0]) ? ORGSEZNAM[0].id : null;
   }
-  function novCardToken() { var a = new Uint8Array(16); crypto.getRandomValues(a); return [].map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
   function isoLokalno(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function danes10() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function uraMin(ts) { return new Date(ts).toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' }); }
@@ -2526,7 +2525,6 @@
           '<button type="button" class="cgrp-btn" data-vnosur="' + z.id + '">Vnesi ure</button>' +
           '<button type="button" class="cgrp-btn ghost" data-uredi="' + z.id + '">Uredi</button>' +
           '<button type="button" class="cgrp-btn ghost' + (z.profile_id ? ' on' : '') + '" data-uporabnik="' + z.id + '">' + (z.profile_id ? 'Uporabnik povezan' : 'Poveži uporabnika') + '</button>' +
-          '<button type="button" class="cgrp-btn ghost" data-karta="' + z.id + '">' + (z.ima_kartico ? 'Nova kartica' : 'Dodeli kartico') + '</button>' +
           '<button type="button" class="cgrp-btn ghost" data-aktiv="' + z.id + '" data-v="' + (z.active ? '0' : '1') + '">' + (z.active ? 'Deaktiviraj' : 'Aktiviraj') + '</button>' +
           '<button type="button" class="cgrp-btn danger" data-izbrisi="' + z.id + '">Izbriši</button>' +
         '</div>';
@@ -2629,7 +2627,6 @@
     box.querySelectorAll('[data-delpair]').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); prisIzbrisiPar(b.dataset.delpair); }); });
     box.querySelectorAll('[data-cpair]').forEach(function (cb) { cb.addEventListener('click', function (e) { e.stopPropagation(); }); cb.addEventListener('change', function (e) { e.stopPropagation(); prisPotrdiPar(cb.dataset.cpair, cb.checked); }); });
     box.querySelectorAll('[data-editpair]').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); prisUrediPar(b.dataset.editpair); }); });
-    box.querySelectorAll('[data-karta]').forEach(function (b) { b.addEventListener('click', function () { prisDodeliKarto(b.dataset.karta); }); });
     box.querySelectorAll('[data-aktiv]').forEach(function (b) { b.addEventListener('click', function () { prisAktiv(b.dataset.aktiv, b.dataset.v === '1'); }); });
     box.querySelectorAll('[data-uredi]').forEach(function (b) { b.addEventListener('click', function () { prisPreimenuj(b.dataset.uredi); }); });
     box.querySelectorAll('[data-uporabnik]').forEach(function (b) { b.addEventListener('click', function () { prisPoveziUporabnika(b.dataset.uporabnik); }); });
@@ -2731,44 +2728,7 @@
     if (del.error) { toast(napakaBesedilo(del.error)); return; }
     toast('Zaposleni izbrisan.'); await risiPrisotnost();
   }
-  // Žeton s kartice DESFire je natanko 32 šestnajstiških znakov (16 bajtov).
-  // Izpiše ga  vpisi_karto.py  na računalniku z bralnikom; portal bralnika nima.
-  var ZETON_VZOREC = /^[0-9A-F]{32}$/;
-
-  async function prisDodeliKarto(empId) {
-    var z = (ZAPOSLENI || []).find(function (x) { return x.id === empId; }); if (!z) return;
-    var zeton = await vnesiModal({
-      naslov: (z.ima_kartico ? 'Nova kartica — ' + z.ime : 'Dodeli kartico — ' + z.ime),
-      sporocilo: z.ima_kartico ? 'Stara kartica bo prenehala delovati.' : '',
-      placeholder: 'Žeton kartice',
-      potrdi: 'Shrani'
-    });
-    if (zeton === null) return;
-    // Presledki in male črke so pri lepljenju običajni — popravimo jih sami.
-    zeton = (zeton || '').replace(/\s+/g, '').toUpperCase();
-    if (!zeton) { toast('Prazen žeton — preklicano.'); return; }
-    if (!ZETON_VZOREC.test(zeton)) {
-      toast('Žeton mora biti 32 šestnajstiških znakov (vpisanih ' + zeton.length + ').');
-      return;
-    }
-    // Enoličnost lovi tudi baza, a tu povemo IME, kar je edino uporabno.
-    var drugi = null; try { drugi = (await sb.rpc('kartica_lastnik', { p_zeton: zeton, p_razen: empId })).data; } catch (e) {}
-    if (drugi) { toast('Ta žeton že ima ' + drugi + '.'); return; }
-
-    // .select() je bistven: brez njega update ne pove, ali je zadel kakšno vrstico.
-    // Pravila RLS vrstice SKRIJEJO — zavrnjen popravek ne javi napake, le popravi nič.
-    var up = await sb.from('employees').update({ card_token: zeton }).eq('id', empId).select('id,ime,ima_kartico');
-    if (up.error) {
-      var m = up.error.message || '';
-      toast(m.indexOf('duplicate') >= 0 || m.indexOf('employees_card_token_key') >= 0
-        ? 'Ta kartica je že dodeljena drugemu zaposlenemu.' : napakaBesedilo(up.error));
-      return;
-    }
-    if (!up.data || !up.data.length) { toast('Ni bilo mogoče shraniti — za to vlogo ni pravic.'); return; }
-    z.ima_kartico = up.data[0].ima_kartico;
-    toast('Kartica shranjena za ' + up.data[0].ime + '.');
-    await risiPrisotnost();
-  }
+  // Kartice zaposlenim dodaja le skrbnik na C72 (aplikacija RFID → Kartica zaposlenega); portal pokaže, ali jo ima.
   // Potrdi/prekliči uro (par prihod–odhod). Označi obe (prihod + odhod).
   async function prisPotrdiPar(idsStr, on) {
     var ids = String(idsStr || '').split(',').filter(Boolean);

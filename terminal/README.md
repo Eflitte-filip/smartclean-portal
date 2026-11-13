@@ -158,12 +158,14 @@ Za **več kartic zapored** je udobneje:
 ~/sc-kartice-venv/bin/python vpisi_vec.py
 ```
 
-Vpišeš ime z nalepke, prisloniš kartico, žeton gre v odložišče (nikjer se ne
-izpiše), ti pa ga v portalu prilepiš pri tej osebi: **Prisotnost → Dodeli
-kartico → ⌘V → Shrani**. Skripta po prvi kartici čaka samo na novo prisloljeno
+Prijaviš se z računom portala, izbereš osebo in prisloniš kartico; žeton se pri njej shrani
+sam (nikjer se ne izpiše). Skripta po prvi kartici čaka samo na novo prisloljeno
 kartico in vpraša, preden prepiše že vpisano — tako ne moreš po nesreči
 razveljaviti kartice, ki že dela. Ime, UID in čas zapiše v `vpisane_kartice.csv`
 (ni v repozitoriju), da pozneje veš, čigava je katera fizična kartica.
+
+V portalu kartice ni mogoče dodeliti (od 4.99): to naredi skrbnik na C72 ali ta skripta.
+Portal pri zaposlenem pokaže, ali ima kartico.
 
 Posamezna kartica: `vpisi_karto.py` izpiše žeton in SQL. Ostalo:
 
