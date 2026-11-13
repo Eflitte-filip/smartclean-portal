@@ -3036,7 +3036,7 @@ html.sc-sam{--vrh:max(12px,env(safe-area-inset-top));}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-noga{display:flex;justify-content:flex-start;align-items:baseline;flex-wrap:wrap;gap:0 6px;padding:0!important;border:0!important;}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-noga b{font-size:var(--fs-17);letter-spacing:-.015em;}
 
-/* prisotnost v mreži: naslovnica (ime; barva osebe kot v Uporabnikih) → ure danes → stanje › ; v seznamu strnjena vrstica s sijem iste barve */
+/* prisotnost v mreži: naslovnica (ime; vsak svojo barvo, povezan z računom isto kot v Uporabnikih) → ure danes → stanje › ; v seznamu strnjena vrstica s sijem iste barve */
 .v5:not(.zm-brez-teksture)[data-view="list"] .pz-seznam .row.pz:not(.okno-kartica){background-image:
   radial-gradient(46% 160% at 0% 40%,color-mix(in oklab,var(--c1,#8f979e) calc(var(--sez-a1) * var(--j,1)),transparent),transparent 72%),
   radial-gradient(28% 130% at 13% 112%,color-mix(in oklab,var(--c2,#cdd3d8) calc(var(--sez-a2) * var(--j,1)),transparent),transparent 76%);}

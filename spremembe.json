@@ -1,5 +1,13 @@
 [
  {
+  "v": "5.03",
+  "d": "2026-11-13",
+  "c": "2026-11-13T13:22:03+01:00",
+  "t": [
+   "Prisotnost: vsak zaposleni ima svojo barvo. Kdor ima račun, ima isto barvo kot v Uporabnikih in te barve nima nihče drug. Sosednji kartici nista nikoli enake barve."
+  ]
+ },
+ {
   "v": "5.02",
   "d": "2026-11-13",
   "c": "2026-11-13T13:17:36+01:00",

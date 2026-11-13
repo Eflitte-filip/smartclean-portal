@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.02 · BETA';
+  var APP_VERZIJA = '5.03 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -2576,6 +2576,13 @@
     var zapUrejeni = (ZAPOSLENI || []).slice().sort(function (a, b) { return (b.active ? 1 : 0) - (a.active ? 1 : 0); });   // aktivni najprej; sicer vrstni red ostane
     var prisotnihN = 0;
     var zapMreza = pogledPref() === 'grid';
+    // Barva vsakega zaposlenega: povezan z računom ima barvo osebe iz Uporabnikov (in je nima nihče drug),
+    // ostali dobijo preostale barve po vrstnem redu na zaslonu — sosednji kartici nista nikoli enaki.
+    var zapBarve = {}, zasedene = {};
+    zapUrejeni.forEach(function (z) { var b = barvaOsebe(z.profile_id, PRIS_UPO); if (b) { zapBarve[z.id] = b; zasedene[b[0]] = 1; } });
+    var proste = BARVE_OSEB.filter(function (b) { return !zasedene[b[0]]; });
+    if (!proste.length) proste = BARVE_OSEB;
+    zapUrejeni.forEach(function (z, i) { if (!zapBarve[z.id]) zapBarve[z.id] = proste[i % proste.length]; });
     var zapKartice = zapUrejeni.map(function (z, i) {
       var l = prisZadnji(z.id); var notri = !!(z.active && l && l.type === 'in');
       // prihod s prejšnjega dne brez odhoda: ni »prisoten«, ampak pozabljena odjava (prej »od 06:30«, kot da je tu zdaj)
@@ -2604,8 +2611,7 @@
           '<button type="button" class="cgrp-btn danger" data-izbrisi="' + z.id + '">Izbriši</button>' +
         '</div>';
       // Mreža: naslovnica z imenom (barva osebe) → ure danes → stanje
-      // barva osebe kot v Uporabnikih (povezan račun = ista oseba); zaposleni brez računa je siv
-      var barva = barvaOsebe(z.profile_id, PRIS_UPO);
+      var barva = zapBarve[z.id];
       if (zapMreza) {
         var stanje = !z.active ? 'Neaktiven' : brezOdhoda ? 'Ni odhoda · ' + odhodTxt.replace(/^ni odhoda · /, '') : notri ? 'Prisoten od ' + uraMin(l.ts) : 'Odsoten';
         var danesTxt = 'danes ' + (danUre || (notri && !brezOdhoda ? 'v teku' : 'ni vpisov'));
