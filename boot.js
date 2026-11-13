@@ -40,8 +40,11 @@
     b.__t = setTimeout(function () { if (b && b.parentNode) b.parentNode.removeChild(b); }, 560);
   };
   // Med nalaganjem datotek (počasna povezava) ostane; če se portal ne zažene, ga po 30 s umakne.
+  // Ko se portal zaganja (window.__SC.zaganjam), ga umakne portal sam — tudi po dolgem čakanju na povezavo
+  // (stanje povezave je takrat napisano na tem zaslonu). Prej je zaslon izginil po 6 s in ostala je prazna prijava.
   var zacetek = Date.now();
   function varuj() {
+    if (window.__SC && window.__SC.zaganjam) { setTimeout(varuj, 1000); return; }
     if (document.readyState === 'complete' || Date.now() - zacetek > 30000) { try { window.scBootDone(); } catch (e) {} return; }
     setTimeout(varuj, 500);
   }

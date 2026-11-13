@@ -324,7 +324,7 @@
   }
   /* ══════════ POVEZAVA (kot Discord) ══════════
      Ko baza ni dosegljiva (brez interneta, prekinjena povezava), je pod zgornjo vrstico trak »Ni povezave«.
-     Portal sam preverja čez 2, 4, 8 … do 30 s (»Poskusi zdaj« takoj); ob vrnitvi trak za trenutek pozeleni
+     Portal sam preverja čez 2, 4, 8 … do 10 s, med zagonom do 4 s (»Poskusi zdaj« takoj); ob vrnitvi trak za trenutek pozeleni
      in podatki se osvežijo (seznami, čipi, živi kanal). Zazna: »offline« brskalnika in neuspel klic v bazo.
      Počasna povezava: ko zahteva visi več kot 6 s ali živi kanal ne dobi odgovora na utrip, portal izmeri
      majhno zahtevo (zdravje baze); traja več kot 2,5 s → trak »Počasna povezava« (počasna poizvedba na
@@ -332,8 +332,61 @@
      Trak je v zgornji vrstici, nikoli čez zgornji rob zaslona (iOS, #sc-vrh). */
   var POV = { stanje: 'ok', cakaj: 2000, ura: null, tik: null, do: 0, el: null, merim: false, pocasiUra: null, vidno: 0 };
   var _izvFetch = window.fetch.bind(window);
-  function povFetch(vir, opt) {
-    var visi = setTimeout(povMeri, 6000), pise = jePisanje(vir, opt);
+  // Branje (GET, bralne funkcije) ob izpadu ne vrne napake: počaka, da je povezava spet tu, in se ponovi — nalaganje teče,
+  // trak pove, zakaj (kot v aplikacijah). Prej je razdelek pokazal »Napaka: Load failed«, zagon pa prijavo.
+  // Pisanje se ne ponavlja samo (napaka gre uporabniku, ki odloči).
+  function povFetch(vir, opt) { return jeVarnoPonoviti(vir, opt) ? povBeriVztrajno(vir, opt) : povFetchEnkrat(vir, opt); }
+  function jeVarnoPonoviti(vir, opt) {
+    var u = String((vir && vir.url) || vir || '');
+    if (!URL_ || u.indexOf(URL_) !== 0 || u.indexOf('/functions/v1/') >= 0) return false;
+    var m = String((opt && opt.method) || (vir && vir.method) || 'GET').toUpperCase();
+    if (m === 'GET' || m === 'HEAD') return true;
+    var i = u.indexOf('/rest/v1/rpc/'); if (i < 0) return false;
+    var fn = u.slice(i + 13).split('?')[0];
+    return !!DELI_BRALNE[fn] && fn.indexOf('touch_') !== 0;   // utrip prisotnosti se ne nabira med izpadom
+  }
+  var _povCakalci = [];
+  function povObNazaj(f) { _povCakalci.push(f); return function () { var i = _povCakalci.indexOf(f); if (i >= 0) _povCakalci.splice(i, 1); }; }
+  function povJavi() { _povCakalci.splice(0).forEach(function (f) { try { f(); } catch (e) {} }); }
+  // počakaj, da baza spet odgovarja: med izpadom do vrnitve povezave; po eni spodleteli zahteva preveri bazo
+  // (dosegljiva → znova po kratkem, rastočem premoru; sicer izpad in čakanje)
+  function povPocakaj(premor) {
+    return new Promise(function (ok) {
+      var enkrat = false;
+      function naprej(ms) { if (enkrat) return; enkrat = true; setTimeout(ok, ms); }
+      if (POV.stanje === 'ni' || POV.stanje === 'povezujem') { povObNazaj(function () { naprej(300); }); return; }
+      povPreveri(8000).then(function (dela) {
+        if (dela) { naprej(premor || 800); return; }
+        povIzpad(); povObNazaj(function () { naprej(300); });
+      });
+    });
+  }
+  function povBeriVztrajno(vir, opt) {
+    var zunanji = opt && opt.signal;
+    return new Promise(function (ok, ne) {
+      var konec = false, ctl = null, sami = false, odj = null, premor = 800, t0 = 0;
+      function zakljuci(f, v) { if (konec) return; konec = true; if (odj) odj(); if (zunanji) zunanji.removeEventListener('abort', prekinjeno); f(v); }
+      function prekinjeno() { sami = false; if (ctl) ctl.abort(); zakljuci(ne, new DOMException('Prekinjeno', 'AbortError')); }
+      if (zunanji) { if (zunanji.aborted) { ne(new DOMException('Prekinjeno', 'AbortError')); return; } zunanji.addEventListener('abort', prekinjeno); }
+      function poskusi() {
+        if (konec) return;
+        ctl = new AbortController(); sami = false; t0 = Date.now();
+        // zahteva, ki visi iz časa izpada: ko se povezava vrne, jo prekini in pošlji znova
+        if (odj) odj();
+        odj = povObNazaj(function () { odj = null; if (!konec && Date.now() - t0 > 1500) { sami = true; ctl.abort(); } });
+        povFetchEnkrat(vir, Object.assign({}, opt || {}, { signal: ctl.signal })).then(function (r) { zakljuci(ok, r); }, function (e) {
+          if (konec) return;
+          if (sami) { poskusi(); return; }
+          if ((zunanji && zunanji.aborted) || (e && e.name === 'AbortError')) { zakljuci(ne, e); return; }
+          if (premor >= 3200) povPocasi();   // baza odgovarja na preverjanje, ta zahteva pa ponavljajo pada: vsaj povej, da traja
+          povPocakaj(premor).then(function () { premor = Math.min(15000, premor * 2); poskusi(); });
+        });
+      }
+      poskusi();
+    });
+  }
+  function povFetchEnkrat(vir, opt) {
+    var visi = setTimeout(povMeri, window.__SC && window.__SC.zaganjam ? 3000 : 6000), pise = jePisanje(vir, opt);   // med zagonom čaka zagonski zaslon: hitreje povej, zakaj
     return _izvFetch(vir, opt).then(function (r) { clearTimeout(visi); if (pise) pozabiDeli(); if (POV.stanje === 'ni' || POV.stanje === 'povezujem') povNazaj(); return r; },
       function (e) { clearTimeout(visi); if (pise) pozabiDeli(); if (!(e && e.name === 'AbortError')) povNapaka(); throw e; });
   }
@@ -342,7 +395,9 @@
   async function povMeri() {
     if (POV.merim || (POV.stanje !== 'ok' && POV.stanje !== 'pocasi')) return;
     POV.merim = true;
-    var t0 = Date.now(), ok = await povPreveri(10000);
+    // odgovor, ki ne pride v 2,5 s, je že počasna povezava — ni treba čakati do konca meritve
+    var t0 = Date.now(), pocasiUra = setTimeout(function () { if (POV.merim) povPocasi(); }, 2500), ok = await povPreveri(10000);
+    clearTimeout(pocasiUra);
     POV.merim = false;
     if (!ok) { povIzpad(); return; }
     if (Date.now() - t0 > 2500) povPocasi();
@@ -362,10 +417,12 @@
   function povTrak() {
     if (!POV.el) {
       POV.el = document.createElement('div'); POV.el.className = 'pov-trak'; POV.el.setAttribute('role', 'status'); POV.el.setAttribute('aria-live', 'polite');
-      POV.el.innerHTML = '<span class="pov-pika" aria-hidden="true"></span><span class="pov-t"></span><button type="button" class="pov-zdaj">Poskusi zdaj</button>';
+      POV.el.innerHTML = '<span class="pov-t"></span><button type="button" class="pov-zdaj">Poskusi znova</button>';
       POV.el.querySelector('.pov-zdaj').addEventListener('click', function () { povPoskus(); });
     }
-    var glava = [document.querySelector('#app .topbar'), document.querySelector('#auth .auth-top')].filter(function (h) { return h && h.getClientRects().length > 0; })[0];   // offsetParent je pri pritrjeni (fixed) vrstici vedno null
+    // med zagonom (in po prijavi) je čez vse zagonski zaslon: trak je tam, pod nalagalnim trakom
+    var zag = document.getElementById('scBoot'), zagIn = zag && !zag.classList.contains('scBoot-hide') && zag.querySelector('.scBoot-in');
+    var glava = zagIn || [document.querySelector('#app .topbar'), document.querySelector('#auth .auth-top')].filter(function (h) { return h && h.getClientRects().length > 0; })[0];   // offsetParent je pri pritrjeni (fixed) vrstici vedno null
     if (glava && POV.el.parentNode !== glava) {
       if (POV.el.parentNode) POV.el.parentNode.classList.remove('z-pov');
       glava.appendChild(POV.el); glava.classList.add('z-pov');
@@ -378,10 +435,10 @@
     document.documentElement.classList.toggle('pov-vidno', POV.stanje !== 'ok');
     if (POV.stanje === 'ok') { el.classList.remove('show'); return; }
     el.classList.add('show');
+    // en miren napis brez odštevanja; med ponovnim poskusom ostane »Ni povezave« (prej je napis vsakih nekaj sekund preskakoval)
     if (POV.stanje === 'spet') { t.textContent = 'Spet povezano'; z.hidden = true; }
-    else if (POV.stanje === 'povezujem') { t.textContent = 'Povezujem …'; z.hidden = true; }
     else if (POV.stanje === 'pocasi') { t.textContent = 'Počasna povezava'; z.hidden = true; }
-    else { t.textContent = 'Ni povezave · znova čez ' + Math.max(1, Math.ceil((POV.do - Date.now()) / 1000)) + ' s'; z.hidden = false; }
+    else { t.textContent = 'Ni povezave'; z.hidden = false; z.disabled = POV.stanje === 'povezujem'; }
   }
   function povIzpad() {
     if (POV.stanje === 'ni' || POV.stanje === 'povezujem') return;
@@ -391,7 +448,6 @@
     clearTimeout(POV.ura); clearInterval(POV.tik);
     POV.do = Date.now() + POV.cakaj;
     POV.ura = setTimeout(povPoskus, POV.cakaj);
-    POV.tik = setInterval(function () { if (POV.stanje === 'ni') povRisi(); }, 1000);
     povRisi();
   }
   async function povPreveri(rok) {
@@ -407,12 +463,14 @@
     var ok = await povPreveri();
     if (POV.stanje !== 'povezujem') return;   // vmes je uspela druga zahteva (trak je že »Spet povezano«)
     if (ok) { povNazaj(); return; }
-    POV.stanje = 'ni'; POV.cakaj = Math.min(30000, POV.cakaj * 2); povNacrtuj();
+    // med zagonom (zagonski zaslon čaka) pogosteje, sicer največ na 10 s — vrnitev povezave mora biti hitro vidna
+    POV.stanje = 'ni'; POV.cakaj = Math.min(window.__SC && window.__SC.zaganjam ? 4000 : 10000, POV.cakaj * 2); povNacrtuj();
   }
   function povNazaj() {
     if (POV.stanje === 'ok' || POV.stanje === 'spet') return;
     clearTimeout(POV.ura); clearInterval(POV.tik);
     POV.stanje = 'spet'; povRisi();
+    povJavi();   // branja, ki čakajo na povezavo, gredo znova
     try { if (sb && sb.realtime) sb.realtime.connect(); } catch (e) {}
     try { if (typeof OSEBJE !== 'undefined' && OSEBJE) { zivListi(); zivCipi(); } } catch (e) {}
     setTimeout(function () { if (POV.stanje === 'spet') { POV.stanje = 'ok'; povRisi(); } }, 1800);
@@ -809,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.01 · BETA';
+  var APP_VERZIJA = '5.02 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -1162,6 +1220,12 @@
   var EYE_OFF = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4l16 16"/><path d="M9.5 5.2A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3 3.6"/><path d="M6.2 7.3A17 17 0 0 0 2 12s3.5 7 10 7a10 10 0 0 0 3.3-.6"/></svg>';
 
   /* ══════════ ZAGON ══════════ */
+  // umakni zagonski zaslon; trak povezave (če je prižgan) gre iz njega v glavo
+  function zagonKonec() {
+    try { if (window.__SC) window.__SC.zaganjam = false; } catch (e) {}
+    try { if (window.scBootDone) window.scBootDone(); } catch (e) {}
+    if (POV.stanje !== 'ok') povRisi();
+  }
   // Vrne false, če uporabnika ni mogoče preveriti (ni povezave, seja potekla/preklicana);
   // razlog je v ZAGON_NAPAKA. Prej je tiho končala in portal je obstal na golem
   // prijavnem zaslonu (»Peremo, vi pa blestite.«) brez obrazca.
@@ -1169,7 +1233,12 @@
   async function start() {
     ZAGON_NAPAKA = null;
     let _gu = null;
-    try { _gu = await sb.auth.getUser(); } catch (e) { ZAGON_NAPAKA = e; return false; }
+    // brez povezave (ali osvežitev seje ne uspe zaradi omrežja): zagonski zaslon pove stanje in počaka — ne prijava
+    for (;;) {
+      try { _gu = await sb.auth.getUser(); } catch (e) { if (jeOmreznaNapaka(e)) { await povPocakaj(1500); continue; } ZAGON_NAPAKA = e; return false; }
+      if (_gu && _gu.error && jeOmreznaNapaka(_gu.error)) { await povPocakaj(1500); continue; }
+      break;
+    }
     const user = _gu && _gu.data && _gu.data.user;
     if (!user) { ZAGON_NAPAKA = (_gu && _gu.error) || new Error('ni uporabnika'); return false; }
     JAZ = user.id;
@@ -1203,7 +1272,7 @@
     await naloziListe();
     pojdi(zacetniRazdelek());   // ob ponovnem nalaganju ostane isti razdelek (#arhiv …), sicer Domov
     // Portal je sestavljen in prva stran izrisana → gladko umakni zagonski zaslon.
-    try { requestAnimationFrame(function () { if (window.scBootDone) window.scBootDone(); }); } catch (e) { try { if (window.scBootDone) window.scBootDone(); } catch (_) {} }
+    try { requestAnimationFrame(zagonKonec); } catch (e) { zagonKonec(); }
     zazeniCustomSelecte();
     try { pokaziObvestila(); } catch (e) {}
     try { narociObvestila(); } catch (e) {}
@@ -2534,9 +2603,10 @@
           '<button type="button" class="cgrp-btn ghost" data-aktiv="' + z.id + '" data-v="' + (z.active ? '0' : '1') + '">' + (z.active ? 'Deaktiviraj' : 'Aktiviraj') + '</button>' +
           '<button type="button" class="cgrp-btn danger" data-izbrisi="' + z.id + '">Izbriši</button>' +
         '</div>';
-      // Mreža: naslovnica z imenom (zelena = prisoten, oranžna = ni odhoda, siva = odsoten/neaktiven) → ure danes → stanje
+      // Mreža: naslovnica z imenom (barva osebe) → ure danes → stanje
+      // barva osebe kot v Uporabnikih (povezan račun = ista oseba); zaposleni brez računa je siv
+      var barva = barvaOsebe(z.profile_id, PRIS_UPO);
       if (zapMreza) {
-        var barva = !z.active ? null : brezOdhoda ? BARVE_STANJA.yellow : notri ? BARVE_STANJA.green : null;
         var stanje = !z.active ? 'Neaktiven' : brezOdhoda ? 'Ni odhoda · ' + odhodTxt.replace(/^ni odhoda · /, '') : notri ? 'Prisoten od ' + uraMin(l.ts) : 'Odsoten';
         var danesTxt = 'danes ' + (danUre || (notri && !brezOdhoda ? 'v teku' : 'ni vpisov'));
         return '<div class="lcell pz-cell' + (z.active ? '' : ' pris-neakt') + '"><button class="row pz" type="button" data-zid="' + z.id + '" aria-haspopup="dialog" title="' + escape_(pod) + '" style="' + naslovnica(barva, z.id) + '">' +
@@ -2547,7 +2617,7 @@
       // ENA vrstica na zaposlenega: ime · stanje · ure danes (prej tri: ime, kartica, značka —
       // do mesečne evidence je bilo treba dolgo drseti). Kartica in uporabnik sta v oknu.
       var stKr = !z.active ? '<span class="pz-st off">neaktiven</span>' : (brezOdhoda ? '<span class="pz-st warn">' + odhodTxt + '</span>' : notri ? '<span class="pz-st in">od ' + uraMin(l.ts) + '</span>' : '<span class="pz-st">odsoten</span>');
-      return '<div class="pz-cell' + (z.active ? '' : ' pris-neakt') + '"><button class="row pz" type="button" data-zid="' + z.id + '" aria-haspopup="dialog" title="' + escape_(pod) + '">' +
+      return '<div class="pz-cell' + (z.active ? '' : ' pris-neakt') + '"><button class="row pz" type="button" data-zid="' + z.id + '" aria-haspopup="dialog" title="' + escape_(pod) + '" style="' + naslovnica(barva, z.id) + '">' +
         '<span class="pz-ime"><span class="row-name"><span class="row-nm">' + escape_(z.ime) + '</span></span>' + stKr + '</span>' +
         '<span class="num pris-zap-ure" title="Danes">' + (danUre || '—') + '</span><span class="chev" aria-hidden="true">›</span></button>' +
         '<div class="arts pris-zap-det">' + det + '</div></div>';
@@ -3126,6 +3196,13 @@
   var BARVE_STANJA = { green: ['#2fa36b', '#9fe0c0'], yellow: ['#e08a1e', '#f6c98a'], red: ['#d9534f', '#f3aaa3'] };
   var BARVE_OSEB = [['#2f6fe0', '#8fb8ff'], ['#e0568a', '#ffb3cf'], ['#e08a1e', '#ffd08a'], ['#7a5ae0', '#c8b0ff'], ['#149aa6', '#8ee8ef'],
     ['#2fa36b', '#9fe0c0'], ['#c9a227', '#f0dc8c'], ['#d9534f', '#f3aaa3'], ['#4b5bd6', '#b3bcff'], ['#a3479c', '#e9b3e4']];
+  // Barva osebe: ista v Uporabnikih in Prisotnosti (povezan zaposleni = isti človek). Mesto računa med vsemi računi,
+  // kot jih vrne baza po e-pošti — obe strani berete profile v tem vrstnem redu, zato ima vsak svojo, dokler jih je do 10.
+  function barvaOsebe(id, racuni) {
+    if (!id || !racuni) return null;
+    for (var i = 0; i < racuni.length; i++) if (racuni[i] && racuni[i].id === id) return BARVE_OSEB[i % BARVE_OSEB.length];
+    return null;
+  }
   function zgoscek(s) { var h = 2166136261; s = String(s || ''); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   // barva: par [temnejša, svetlejša] ali null (siva); seme: stalen vzorec za isto stvar
   function naslovnica(barva, seme) {
@@ -10477,7 +10554,7 @@
         (u.active ? '' : '<span class="pill">izklopljen</span>');
       const ime = u.full_name || u.email || '—';
       const prijava = u.last_login ? datumcas(u.last_login) : '';
-      return `<div class="lcell${u.active ? '' : ' u-off'}"><button class="row has-tag" type="button" data-uid="${u.id}" style="${naslovnica(BARVE_OSEB[ui % BARVE_OSEB.length], u.id)}" aria-haspopup="dialog">
+      return `<div class="lcell${u.active ? '' : ' u-off'}"><button class="row has-tag" type="button" data-uid="${u.id}" style="${naslovnica(barvaOsebe(u.id, ljudje), u.id)}" aria-haspopup="dialog">
       <span><span class="row-name"><span class="row-nm">${escape_(ime)}</span></span><br><span class="row-legal">${escape_(u.email || '—')}</span>${znacke ? '<span class="u-znacke">' + znacke + '</span>' : ''}</span>
       <span class="row-pct"></span><span class="num u-prijava" title="Zadnja prijava">${prijava ? escape_(prijava.split(',')[0]) : '—'}</span><span class="chev" aria-hidden="true">›</span></button>
       <div class="arts u-det">
@@ -11500,8 +11577,9 @@
     }
     // samo portal (/): aplikacija za spremne liste (/mobile) ima na isti domeni svoj service worker
     // in predpomnilnik — prej sta bila izbrisana tudi ta in na iPhonu se brez povezave ni odprla
-    try { if ('serviceWorker' in navigator) { var regs = await navigator.serviceWorker.getRegistrations(); for (var i = 0; i < regs.length; i++) { if (regs[i].scope === location.origin + '/') { try { await regs[i].unregister(); } catch (e) {} } } } } catch (e) {}
-    try { if (window.caches) { var ks = await caches.keys(); await Promise.all(ks.filter(function (k) { return k.indexOf('sc-portal') === 0; }).map(function (k) { return caches.delete(k); })); } } catch (e) {}
+    // Stran (HTML) gre vedno najprej na mrežo (sw.js), nova koda ima novo oznako ?v= → navaden ponovni zagon zadošča.
+    // Prej sta se odjavila service worker in izbrisala shramba: naslednje odprtje pri slabi povezavi je bila bela stran.
+    try { if ('serviceWorker' in navigator) { var reg = await navigator.serviceWorker.getRegistration('/'); if (reg) await Promise.race([reg.update(), new Promise(function (r) { setTimeout(r, 3000); })]); } } catch (e) {}
     location.reload();
   }
   async function preveriReload() {
@@ -11656,6 +11734,7 @@
   var _urlKoda = '';
   try { var _up = new URLSearchParams(location.search); _urlKoda = (_up.get('koda') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10); if (_up.has('koda')) { _up.delete('koda'); history.replaceState(null, '', location.pathname + (_up.toString() ? '?' + _up : '') + location.hash); } } catch (e) {}
   try { if (!_urlKoda) _urlKoda = (sessionStorage.getItem('sc-povabilo-koda') || '').slice(0, 10); sessionStorage.removeItem('sc-povabilo-koda'); } catch (e) {}   // po odjavi zaradi povabila
+  try { if (window.__SC && sb) window.__SC.zaganjam = true; } catch (e) {}   // boot.js in start.js zagonskega zaslona ne umakneta (morda čaka na povezavo)
   (async function () {
     if (!sb) return;
     let recovery = false;
@@ -11677,7 +11756,13 @@
       // Živa seja (osvežitev strani / vrnitev v zavihek) → OSTANI prijavljen,
       // tako kot pri velikih ponudnikih. Odjava (gumb) sejo ukine → spodaj izbirnik.
       var _seja = null;
-      try { var _rs = await sb.auth.getSession(); _seja = _rs && _rs.data && _rs.data.session; } catch (e) {}
+      // seja je na napravi; če je potekla, jo supabase osveži prek omrežja — ob izpadu počakaj, ne pokaži prijave
+      for (;;) {
+        var _rs = null;
+        try { _rs = await sb.auth.getSession(); } catch (e) { _rs = { error: e }; }
+        if (_rs && _rs.error && jeOmreznaNapaka(_rs.error)) { await povPocakaj(1500); continue; }
+        _seja = _rs && _rs.data && _rs.data.session; break;
+      }
       var _zagonMsg = '';
       if (!recovery && _seja && _seja.user) {
         try { if (await start() !== false) { if (_urlKoda && REG_IMA) povabiloPriSeji(_urlKoda); return; } } catch (e) { ZAGON_NAPAKA = e; }
@@ -11692,8 +11777,8 @@
       }
     }
     // Prijavni zaslon je pripravljen → umakni zagonski zaslon.
-    try { if (window.scBootDone) window.scBootDone(); } catch (e) {}
-  })();
+    zagonKonec();
+  })().catch(function () { zagonKonec(); });
 
   /* Šele tu vemo, da se je celotna skripta prevedla in izvedla. */
   if (window.__SC) window.__SC.ok = true;

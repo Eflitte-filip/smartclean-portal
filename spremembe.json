@@ -1,5 +1,15 @@
 [
  {
+  "v": "5.02",
+  "d": "2026-11-13",
+  "c": "2026-11-13T13:17:36+01:00",
+  "t": [
+   "Slaba povezava: ob odprtju se nalagalni zaslon pokaže takoj (prej včasih bela stran). Brez povezave na njem piše »Ni povezave« z gumbom »Poskusi znova«. Portal počaka in se odpre sam, ko je povezava spet tu, ne pokaže več prijave z »prijava je potekla«.",
+   "Med delom: ob izpadu nalaganje počaka na povezavo in se nadaljuje samo (prej »Napaka: Load failed«). Trak v glavi je brez odštevanja, z gumbom.",
+   "Prisotnost in Uporabniki: ista oseba ima povsod isto ime in isto barvo. Preimenovanje na eni strani preimenuje tudi drugo."
+  ]
+ },
+ {
   "v": "5.01",
   "d": "2026-11-13",
   "c": "2026-11-13T12:37:13+01:00",

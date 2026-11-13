@@ -41,6 +41,7 @@
      portal) — npr. strežnik ne odgovori. Pokaži prijavo s pojasnilom, ne golega napisa. */
   function varovalo() {
     if (!window.__SC.ok) return;
+    if (window.__SC.zaganjam) { setTimeout(varovalo, 3000); return; }   // portal se še zaganja (morda čaka na povezavo — piše na zagonskem zaslonu)
     var auth = document.getElementById('auth'), pp = document.getElementById('profilePicker'), ab = document.getElementById('authBox');
     if (!auth || auth.style.display === 'none' || !pp || !ab) return;
     if (!/\bhidden\b/.test(pp.className) || !/\bhidden\b/.test(ab.className)) return;

@@ -3036,7 +3036,10 @@ html.sc-sam{--vrh:max(12px,env(safe-area-inset-top));}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-noga{display:flex;justify-content:flex-start;align-items:baseline;flex-wrap:wrap;gap:0 6px;padding:0!important;border:0!important;}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) .fak-noga b{font-size:var(--fs-17);letter-spacing:-.015em;}
 
-/* prisotnost v mreži: naslovnica (ime; barva = stanje) → ure danes → stanje › ; v seznamu ostane strnjena vrstica */
+/* prisotnost v mreži: naslovnica (ime; barva osebe kot v Uporabnikih) → ure danes → stanje › ; v seznamu strnjena vrstica s sijem iste barve */
+.v5:not(.zm-brez-teksture)[data-view="list"] .pz-seznam .row.pz:not(.okno-kartica){background-image:
+  radial-gradient(46% 160% at 0% 40%,color-mix(in oklab,var(--c1,#8f979e) calc(var(--sez-a1) * var(--j,1)),transparent),transparent 72%),
+  radial-gradient(28% 130% at 13% 112%,color-mix(in oklab,var(--c2,#cdd3d8) calc(var(--sez-a2) * var(--j,1)),transparent),transparent 76%);}
 html[data-view] .pz-mreza .row .num::before{content:none;}
 .v5[data-view="grid"] .pz-mreza .lcell:not(.open) .row .num{grid-column:1 / -1;}
 .v5[data-view="grid"] .pz-mreza .lcell.pris-neakt:not(.open) .row{opacity:1;}
@@ -3518,11 +3521,19 @@ html{--pov-h:0px;}
 html.pov-vidno{--pov-h:44px;}
 .pov-trak.show{height:var(--pov-h);opacity:1;border-top-width:1px;}
 .pov-trak[data-st="spet"]{background:color-mix(in srgb,var(--st-ok) 14%,var(--bg));border-top-color:color-mix(in srgb,var(--st-ok) 30%,var(--line));}
-.pov-pika{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--st-warn);}
-.pov-trak:is([data-st="povezujem"],[data-st="pocasi"]) .pov-pika{animation:nalagaPulz .7s ease-in-out infinite alternate;}
-.pov-trak[data-st="spet"] .pov-pika{background:var(--st-ok);}
 .pov-t{font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;}
-.pov-zdaj{appearance:none;-webkit-appearance:none;flex:0 0 auto;margin:0;padding:6px;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+/* na zagonskem zaslonu (zagon brez povezave ali počasen): brez podlage, pod nalagalnim trakom; zaslon počaka in nadaljuje sam */
+#scBoot .pov-trak{position:absolute;left:50%;top:62px;transform:translateX(-50%);flex-direction:column;gap:18px;height:auto;padding:0;background:none;border:0;
+  font-size:var(--fs-15);font-weight:500;letter-spacing:-.01em;color:color-mix(in srgb,var(--ink) 80%,transparent);transition:opacity .45s ease;}
+#scBoot .pov-trak.show{height:auto;border:0;}
+#scBoot .pov-trak[data-st="spet"]{background:none;color:var(--ink);}
+#scBoot .pov-zdaj{height:var(--ctrl-h-md,36px);padding:0 18px;font-size:var(--fs-14);}
+/* gumb kot drugi gumbi v portalu: tableta z obrobo (v traku 30 px, na zagonskem zaslonu 36 px) */
+.pov-zdaj{appearance:none;-webkit-appearance:none;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;margin:0;height:30px;padding:0 14px;
+  border:1px solid var(--line-strong);border-radius:var(--r-full);background:transparent;color:var(--ink);font:inherit;font-size:var(--fs-13);font-weight:500;letter-spacing:-.005em;
+  cursor:pointer;transition:background-color .2s ease,border-color .2s ease,opacity .2s ease;}
+@media(hover:hover){ .pov-zdaj:hover{background:var(--surface);border-color:color-mix(in srgb,var(--ink) 28%,transparent);} }
+.pov-zdaj:disabled{opacity:.45;cursor:default;}
 .pov-zdaj[hidden]{display:none;}
 @media(max-width:359px){ .pov-trak{gap:6px;padding:0 10px;font-size:var(--fs-13);} }
 html.pov-vidno .side{top:calc(65px + var(--pov-h));}
