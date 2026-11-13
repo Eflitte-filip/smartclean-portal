@@ -406,5 +406,6 @@ public class Glavna extends Activity implements Bralnik.Poslusalec {
         @JavascriptInterface public void nfcUstavi() { if (mostDovoljen()) ui.post(nfc::ustavi); }
         @JavascriptInterface public void nfcNastavitve() { if (mostDovoljen()) ui.post(Glavna.this::nfcNastavitve); }
         @JavascriptInterface public void karticaVpisi(String json) { if (mostDovoljen()) nfc.vpisi(json); }
+        @JavascriptInterface public void karticaPreberi(String json) { if (mostDovoljen()) nfc.preberi(json); }
     }
 }

@@ -1,5 +1,14 @@
 [
  {
+  "v": "5.00",
+  "d": "2026-11-13",
+  "c": "2026-11-13T12:05:00+01:00",
+  "t": [
+   "C72 → Poišči: skrbnik prisloni kartico za štemplanje na hrbet naprave in vidi, čigava je. Kartica se prebere enako kot na terminalu, zato je izid zanesljiv tudi pri zamenjanih karticah.",
+   "Aplikacija za C72 1.9."
+  ]
+ },
+ {
   "v": "4.99",
   "d": "2026-11-13",
   "c": "2026-11-13T11:38:00+01:00",

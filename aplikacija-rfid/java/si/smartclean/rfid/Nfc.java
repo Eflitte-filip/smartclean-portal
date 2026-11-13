@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
  * dokler je ne vpišemo ali odmaknemo. Dogodki gredo v stran kot »scrfid« s tip = "kartica":
  *   { stanje: "najdena", uid, nasa }      kartica je prislonjena (nasa = na njej je že aplikacija SmartClean)
  *   { stanje: "vpisana", uid }             vpis in preverba uspela
+ *   { stanje: "prebrana", uid, zeton }     žeton prebran z bralnim ključem (Poišči: čigava je kartica)
  *   { stanje: "napaka", uid, sporocilo, odmaknjena }
  *   { stanje: "ni-desfire" }               prislonjena kartica ni DESFire (npr. bančna ali NTAG)
  * Ukazi kartici tečejo v eni niti, nikoli dva hkrati.
@@ -130,6 +131,32 @@ final class Nfc implements NfcAdapter.ReaderCallback {
             } catch (Exception e) {
                 Log.w("SmartCleanRFID", "vpis", e);
                 javi("napaka", "uid", zaUid, "sporocilo", "Vpis ni uspel.", "odmaknjena", false);
+            }
+        });
+    }
+
+    /** { uid, bralni } — žeton prislonjene kartice (Poišči: čigava je kartica). Dogodek »prebrana« z žetonom. */
+    void preberi(String json) {
+        nit.execute(() -> {
+            String zaUid = "";
+            try {
+                JSONObject j = new JSONObject(json);
+                zaUid = j.optString("uid");
+                IsoDep d = kartica;
+                if (d == null || !zaUid.equalsIgnoreCase(uid) || !d.isConnected()) {
+                    javi("napaka", "uid", zaUid, "sporocilo", "Kartica je bila odmaknjena.", "odmaknjena", true);
+                    return;
+                }
+                byte[] z = new Kartica(d::transceive).preberi(bajti(j.getString("bralni")));
+                javi("prebrana", "uid", zaUid, "zeton", hex(z));
+            } catch (Kartica.Napaka e) {
+                javi("napaka", "uid", zaUid, "sporocilo", e.getMessage(), "odmaknjena", false);
+            } catch (IOException e) {
+                kartica = null;
+                javi("napaka", "uid", zaUid, "sporocilo", "Kartica je bila odmaknjena.", "odmaknjena", true);
+            } catch (Exception e) {
+                Log.w("SmartCleanRFID", "branje", e);
+                javi("napaka", "uid", zaUid, "sporocilo", "Branje ni uspelo.", "odmaknjena", false);
             }
         });
     }

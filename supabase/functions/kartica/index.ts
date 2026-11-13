@@ -9,6 +9,8 @@
 //    zaposleni                     → { zaposleni: [{ id, ime, ima_kartico }] }
 //    nov      { ime }              → { zaposleni: { id, ime, ima_kartico } }   (nov zaposleni)
 //    kljuci   { uid }              → { glavni, bralni, zeton }   (hex; žeton je berljiv za terminal)
+//    bralni   { uid }              → { bralni }                  (Poišči: ključ za branje te kartice)
+//    lastnik  { zeton }            → { ime, aktiven } | { ime: null }   (Poišči: čigava je kartica)
 //    dodeli   { emp_id, zeton }    → { ime }                     (employees.card_token = žeton)
 //
 //  Kdo sme: skrbnik po isti definiciji kot aplikacija RFID (rfid_podatki → skrbnik).
@@ -107,7 +109,8 @@ async function obravnavaj(req: Request): Promise<Response> {
       return odgovor({ zaposleni: data });
     }
 
-    case "kljuci": {
+    case "kljuci":
+    case "bralni": {
       const uidHex = String(telo.uid ?? "").replace(/\s+/g, "").toUpperCase();
       // UID iz protokola proti trkom: 4 ali 7 bajtov (DESFire EV3 privzeto 7, naključni ID 4 — ta ni primeren)
       if (!/^([0-9A-F]{8}|[0-9A-F]{14}|[0-9A-F]{20})$/.test(uidHex)) return odgovor({ napaka: "Neveljaven UID kartice." }, 400);
@@ -119,11 +122,22 @@ async function obravnavaj(req: Request): Promise<Response> {
         return odgovor({ napaka: "Ključi za kartice na strežniku niso nastavljeni." }, 503);
       }
       const uid = izHex(uidHex);
+      // Poišči (čigava je kartica): le bralni ključ te kartice — z njim se žeton prebere enako kot na terminalu
+      if (telo.dejanje === "bralni") return odgovor({ bralni: vHex(await izpeljiKljuc(rd, uid)) });
       return odgovor({
         glavni: vHex(await izpeljiKljuc(am, uid)),
         bralni: vHex(await izpeljiKljuc(rd, uid)),
         zeton: vHex(novZeton()),
       });
+    }
+
+    case "lastnik": {
+      // čigava je kartica: zaposleni z žetonom, ki ga je C72 prebral s kartice
+      const zeton = String(telo.zeton ?? "").toUpperCase();
+      if (!/^[0-9A-F]{32}$/.test(zeton)) return odgovor({ napaka: "Neveljaven žeton." }, 400);
+      const { data, error } = await admin.from("employees").select("ime,active").eq("card_token", zeton).maybeSingle();
+      if (error) throw error;
+      return odgovor(data ? { ime: data.ime, aktiven: data.active } : { ime: null });
     }
 
     case "dodeli": {
