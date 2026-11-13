@@ -3021,6 +3021,10 @@ html.sc-sam{--vrh:max(12px,env(safe-area-inset-top));}
 .v5[data-view="grid"] #usersList .lcell:not(.open) .row .u-znacke{flex-wrap:wrap;gap:4px;}
 .v5[data-view="grid"] #usersList .lcell:not(.open) .row .u-znacke + .row-pct + .num::before,.v5[data-view="grid"] #usersList .lcell:not(.open) .row .num::before{content:'· ';}
 .v5[data-view="grid"] #usersList .lcell.u-off:not(.open) .row .row-name{filter:grayscale(1);opacity:.7;}
+/* Stranke v mreži: pod naslovnico le cenik in teža tega meseca — brez polnega naziva (je v oknu stranke); 0 kg se ne izpiše */
+.v5[data-view="grid"] #content .lcell:not(.open) .row .row-legal{display:none!important;}
+.v5[data-view="grid"] #content .lcell:not(.open) .row .num.nic{display:none!important;}
+.v5[data-view="grid"] #content .lcell:not(.open) .row:has(.num.nic) .row-cenik::after{content:none;}
 
 /* skupina cenika / cenik stranke: naslovnica (ime) → št. artiklov → podnaslov › */
 .v5[data-view="grid"] :is(#cenikList,.art-skupine) .cgrp:not(.open) .cgrp-head-row{display:block;}
@@ -3112,8 +3116,10 @@ html[data-view] .pz-mreza .row .num::before{content:none;}
 .v5 .vu-sk.prazno .vu-cas{display:none;}
 .v5 .vu-brez{display:none;height:calc(var(--vu-h,40px) * 3);flex-direction:column;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);overflow:hidden;}
 .v5 .vu-sk.prazno .vu-brez{display:flex;}
-/* odprta izmena: eno polje z dvema deloma, enako visoko in zaobljeno kot polje ure */
-.v5 .vu-brez button{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;padding:0 8px;border:0;border-radius:0;background:none;color:var(--ink);font:500 var(--fs-14)/1 var(--sans);cursor:pointer;transition:background-color .18s ease;}
+/* odprta izmena: eno polje »Vpiši odhod«, enako visoko in zaobljeno kot polje ure; stanje (v teku / ni odhoda) desno ob oznaki */
+.v5 .vu-brez button{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;padding:0 8px;border:0;border-radius:0;background:none;color:var(--ink);font:500 var(--fs-15)/1.2 var(--sans);letter-spacing:-.005em;cursor:pointer;transition:background-color .18s ease;}
+.v5 .vu-teku{margin-left:auto;font-size:var(--fs-12);color:var(--mid);}
+.v5 .vu-sk:not(.prazno) .vu-teku{display:none;}
 .v5 .vu-brez button[hidden]{display:none;}
 .v5 .vu-brez button + button{border-top:1px solid var(--line);}
 .v5 .vu-brez button[hidden] + button{border-top:0;}
