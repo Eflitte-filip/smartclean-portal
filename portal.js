@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.09 · BETA';
+  var APP_VERZIJA = '5.10 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -3665,6 +3665,7 @@
         td.innerHTML = cela(f && f.kg > 0 && f.neto != null ? f.neto / f.kg : null);
       });
       var tt = box.querySelector('.uc-eur-tot'); if (tt) tt.innerHTML = cela(_ucDonutEurKg);
+      strOsvezi();   // stroški: promet na kg in razlika
     }
   }
 
@@ -3986,6 +3987,146 @@
       fn();
     })();
   }
+  /* ══════════ STROŠKI NA KG (5.10) — Statistika, čisto spodaj ══════════
+     Za isto obdobje kot ostala Statistika (Mesec / 3 meseci / Vse): stroški skupaj in na kg opranega perila,
+     zraven promet na kg (brez DDV) in razlika; razčlenitev po vrstah s porabo na kg (l vode/kg, kWh/kg …).
+     Gorivo se vzame iz razdelka Gorivo (brez DDV) — ne vpisuje se dvakrat. Vidi in vpisuje vodstvo (kot Gorivo). */
+  var STROSKI = null, _strNal = null;
+  var STR_VRSTE = [['sredstva', 'Pralna sredstva', 'kg'], ['voda', 'Voda', 'm3'], ['elektrika', 'Elektrika', 'kwh'], ['plin', 'Plin', 'm3'],
+    ['servis', 'Servis in vzdrževanje', ''], ['najemnina', 'Najemnina', ''], ['place', 'Plače', ''], ['drugo', 'Drugo', '']];
+  var STR_ENOTE = { l: 'l', kg: 'kg', m3: 'm³', kwh: 'kWh' };
+  function strVrsta(v) { var x = STR_VRSTE.filter(function (r) { return r[0] === v; })[0]; return x ? x[1] : v; }
+  function strSme() { return JE_SUPER(); }   // enako kot app.sme_gorivo
+  function eurNaKg(v) { return (Number(v) || 0).toLocaleString('sl-SI', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' €/kg'; }
+  function strNalozi() {
+    if (!strSme()) return Promise.resolve(null);
+    if (_strNal) return _strNal;
+    _strNal = (async function () {
+      var r = await sb.from('stroski').select('id,datum,vrsta,opis,znesek,kolicina,enota,avtor').is('deleted_at', null).order('datum', { ascending: false }).limit(5000);
+      if (r.error) throw r.error;
+      STROSKI = (r.data || []).map(function (x) { return Object.assign({}, x, { znesek: parseFloat(x.znesek) || 0, kolicina: x.kolicina == null ? null : parseFloat(x.kolicina) }); });
+      if (GORIVO === null && sme('gorivo', 'r')) { try { await naloziGorivo(); } catch (e) {} }
+      return STROSKI;
+    })().finally(function () { _strNal = null; });
+    return _strNal;
+  }
+  // poraba na kg opranega perila (enota → prikaz)
+  function strPoraba(kol, enota, kg) {
+    if (!kol || !enota) return '';
+    var na = !kg ? '' : enota === 'm3' ? ' · ' + fmtStevilo1(kol * 1000 / kg) + ' l/kg' : enota === 'kwh' ? ' · ' + (kol / kg).toLocaleString('sl-SI', { maximumFractionDigits: 2 }) + ' kWh/kg'
+      : enota === 'kg' ? ' · ' + fmtStevilo1(kol * 1000 / kg) + ' g/kg' : enota === 'l' ? ' · ' + fmtStevilo1(kol * 1000 / kg) + ' ml/kg' : '';
+    return kol.toLocaleString('sl-SI', { maximumFractionDigits: 2 }) + ' ' + STR_ENOTE[enota] + na;
+  }
+  function strHtml(kg, rangeLbl) {
+    if (!strSme()) return '';
+    var o = ucDonutObdobje(), vObd = function (d) { return d >= o.od && d <= o.do; };
+    var glava = '<div class="pris-h"><div><h3 class="sec-h">Stroški</h3><p class="uc-obd-lbl">' + escape_(rangeLbl) + '</p></div>' +
+      '<span class="pris-hbtns"><button type="button" class="cgrp-btn uc-str-novo tb-ikona" title="Dodaj strošek" aria-label="Dodaj strošek">' + IKO_T_PLUS + '</button></span></div>';
+    if (STROSKI === null) return '<div class="pris-card uc-stroski">' + glava + NALAGANJE + '</div>';
+    var vnosi = STROSKI.filter(function (x) { return vObd(x.datum); });
+    var po = {};
+    vnosi.forEach(function (x) {
+      var g = po[x.vrsta] || (po[x.vrsta] = { ime: strVrsta(x.vrsta), eur: 0, kol: {}, n: 0 });
+      g.eur += x.znesek; g.n++;
+      if (x.kolicina && x.enota) g.kol[x.enota] = (g.kol[x.enota] || 0) + x.kolicina;
+    });
+    var gor = (GORIVO || []).filter(function (x) { return vObd(x.datum); });
+    if (gor.length) po.gorivo = { ime: 'Gorivo', eur: gor.reduce(function (s, x) { return s + gorNeto(x.znesek, x.ddv); }, 0), kol: { l: gor.reduce(function (s, x) { return s + (x.litri || 0); }, 0) }, n: gor.length, iz: 'Gorivo' };
+    var skupaj = Object.keys(po).reduce(function (s, k) { return s + po[k].eur; }, 0);
+    var promet = (_ucDonutEurKljuc === o.key && _ucDonutEurKg != null) ? _ucDonutEurKg : null;
+    var naKg = kg > 0 ? skupaj / kg : null;
+    var povz = skupaj > 0
+      ? '<div class="uc-str-povz"><p class="uc-str-glavno"><b>' + (naKg != null ? eurNaKg(naKg) : '—') + '</b> stroškov na kg opranega perila</p>' +
+        '<p class="uc-str-prim">' + [cenaFmt(skupaj) + ' brez DDV za ' + fmtKg(kg),
+          promet != null ? 'promet ' + eurNaKg(promet) : '',
+          promet != null && naKg != null ? 'razlika <b class="' + (promet - naKg < 0 ? 'uc-str-minus' : '') + '">' + eurNaKg(promet - naKg) + '</b>' : ''].filter(Boolean).join(' · ') + '</p></div>'
+      : '';
+    var vrste = Object.keys(po).sort(function (a, b) { return po[b].eur - po[a].eur; });
+    var tbl = vrste.length ? '<div class="gor-scroll"><table class="pris-tbl uc-str-tbl"><thead><tr><th>Vrsta</th><th>Znesek</th><th>€/kg</th><th class="uc-str-por">Poraba</th></tr></thead><tbody>' +
+      vrste.map(function (k) {
+        var g = po[k], por = Object.keys(g.kol).map(function (e) { return strPoraba(g.kol[e], e, g.iz ? 0 : kg); }).join(', ');   // gorivo: le litri (na kg perila nima pomena)
+        return '<tr><td>' + escape_(g.ime) + (g.iz ? ' <span class="u-sub">· iz razdelka Gorivo</span>' : '') + (por ? '<span class="uc-str-por-m">' + escape_(por) + '</span>' : '') + '</td><td class="pris-ure">' + cenaFmt(g.eur) + '</td><td class="pris-ure">' + (kg > 0 ? eurNaKg(g.eur / kg) : '—') + '</td><td class="uc-str-por">' + escape_(por) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' : '';
+    var seznam = vnosi.length ? '<details class="uc-str-vnosi"><summary>Vnosi · ' + stevilo(vnosi.length) + '</summary><div class="gor-scroll"><table class="pris-tbl uc-str-tbl"><tbody>' +
+      vnosi.map(function (x) {
+        return '<tr class="uc-str-vrst" data-str="' + escape_(x.id) + '" tabindex="0"><td>' + escape_(datum(x.datum)) + '</td><td>' + escape_(strVrsta(x.vrsta)) + (x.opis ? ' <span class="u-sub">· ' + escape_(x.opis) + '</span>' : '') + '</td>' +
+          '<td class="pris-ure">' + cenaFmt(x.znesek) + '</td><td class="uc-str-por">' + escape_(x.kolicina && x.enota ? strPoraba(x.kolicina, x.enota, 0) : '') + '</td></tr>';
+      }).join('') + '</tbody></table></div></details>' : '';
+    var prazno = !vrste.length ? '<p class="u-sub uc-str-prazno">V tem obdobju ni vnesenih stroškov.</p>' : '';
+    return '<div class="pris-card uc-stroski">' + glava + povz + tbl + prazno + seznam + '</div>';
+  }
+  function strVezi(box) {
+    var k = box.querySelector('.uc-stroski'); if (!k) return;
+    var n = k.querySelector('.uc-str-novo'); if (n) n.addEventListener('click', function () { strObrazec(null); });
+    k.querySelectorAll('[data-str]').forEach(function (tr) {
+      var odpri = function () { var x = (STROSKI || []).filter(function (s) { return s.id === tr.dataset.str; })[0]; if (x) strObrazec(x); };
+      tr.addEventListener('click', odpri); tr.addEventListener('keydown', function (e) { if (e.key === 'Enter') odpri(); });
+    });
+  }
+  // osveži le kartico stroškov (diagram nad njo se ne izriše znova)
+  function strOsvezi() {
+    var box = $('ucList'), k = box && box.querySelector('.uc-stroski'); if (!k || typeof _strKgObd !== 'number') return;
+    var odprto = !!(k.querySelector('.uc-str-vnosi') || {}).open;
+    k.outerHTML = strHtml(_strKgObd, _strObdLbl);
+    var nov = box.querySelector('.uc-stroski'); if (nov && odprto) { var d = nov.querySelector('.uc-str-vnosi'); if (d) d.open = true; }
+    strVezi(box);
+  }
+  var _strKgObd = null, _strObdLbl = '';
+  function strObrazec(rec) {
+    var nov = !rec;
+    var vrstaOpc = STR_VRSTE.map(function (v) { return '<option value="' + v[0] + '"' + (rec && rec.vrsta === v[0] ? ' selected' : '') + '>' + v[1] + '</option>'; }).join('');
+    var enotaOpc = function (izb) { return '<option value="">—</option>' + Object.keys(STR_ENOTE).map(function (e) { return '<option value="' + e + '"' + (izb === e ? ' selected' : '') + '>' + STR_ENOTE[e] + '</option>'; }).join(''); };
+    var back = document.createElement('div'); back.className = 'sc-modal-back';
+    back.innerHTML = '<div class="sc-modal str-modal" role="dialog" aria-modal="true"><h4>' + (nov ? 'Nov strošek' : 'Uredi strošek') + '</h4><div class="ur-form">' +
+      '<div class="ur-grid nl-2"><label class="ur-f"><span>Datum</span><input type="date" data-datum value="' + escape_(nov ? danes10() : rec.datum) + '"></label>' +
+      '<label class="ur-f"><span>Vrsta</span><select data-vrsta>' + vrstaOpc + '</select></label></div>' +
+      '<label class="ur-f"><span>Znesek brez DDV (€)</span><input type="number" step="0.01" min="0" inputmode="decimal" data-znesek value="' + (nov ? '' : rec.znesek) + '"></label>' +
+      '<div class="ur-grid nl-2"><label class="ur-f"><span>Količina</span><input type="number" step="0.001" min="0" inputmode="decimal" data-kolicina value="' + (nov || rec.kolicina == null ? '' : rec.kolicina) + '"></label>' +
+      '<label class="ur-f"><span>Enota</span><select data-enota>' + enotaOpc(nov ? 'kg' : rec.enota) + '</select></label></div>' +
+      '<label class="ur-f"><span>Opis</span><input type="text" data-opis maxlength="200" value="' + escape_(nov ? '' : rec.opis || '') + '"></label>' +
+      '<p class="u-sub ur-msg" data-msg role="status" aria-live="polite"></p></div>' +
+      '<div class="sc-modal-acts">' + (nov ? '' : '<button type="button" class="sc-modal-btn danger" data-brisi>Izbriši</button>') +
+      '<button type="button" class="sc-modal-btn ghost" data-no>Prekliči</button><button type="button" class="sc-modal-btn primary" data-yes>Shrani</button></div></div>';
+    document.body.appendChild(back); _modalA11y(back); requestAnimationFrame(function () { back.classList.add('show'); });
+    var g = function (s) { return back.querySelector(s); }, done = false;
+    function zapri() { if (done) return; done = true; back.classList.remove('show'); document.removeEventListener('keydown', onk, true); setTimeout(function () { back.remove(); }, 180); _modalVrniFokus(); }
+    function onk(e) { if (e.key === 'Escape') { e.stopPropagation(); zapri(); } }
+    document.addEventListener('keydown', onk, true);
+    back.addEventListener('click', function (e) { if (e.target === back) zapri(); });
+    g('[data-no]').addEventListener('click', zapri);
+    // privzeta enota po vrsti (voda m³, elektrika kWh …), dokler je uporabnik ne izbere sam
+    var enotaRocno = !nov;
+    g('[data-enota]').addEventListener('change', function () { enotaRocno = true; });
+    g('[data-vrsta]').addEventListener('change', function () { if (enotaRocno) return; var v = STR_VRSTE.filter(function (r) { return r[0] === g('[data-vrsta]').value; })[0]; g('[data-enota]').value = v ? v[2] : ''; });
+    if (nov) g('[data-vrsta]').dispatchEvent(new Event('change'));
+    g('[data-yes]').addEventListener('click', async function () {
+      var btn = this, msg = g('[data-msg]'), zn = parseFloat(String(g('[data-znesek]').value).replace(',', '.'));
+      if (!(zn >= 0) || g('[data-znesek]').value === '') { msg.textContent = 'Vpiši znesek.'; return; }
+      var kol = parseFloat(String(g('[data-kolicina]').value).replace(',', '.'));
+      var zapis = { datum: g('[data-datum]').value || danes10(), vrsta: g('[data-vrsta]').value, znesek: Math.round(zn * 100) / 100,
+        kolicina: kol > 0 ? kol : null, enota: kol > 0 ? (g('[data-enota]').value || null) : null, opis: g('[data-opis]').value.trim() || null };
+      btn.disabled = true; btn.classList.add('nalaga');
+      var r = nov ? await sb.from('stroski').insert(Object.assign({ avtor: JAZIME || null }, zapis)).select('id').single() : await sb.from('stroski').update(zapis).eq('id', rec.id);
+      if (r.error) { msg.textContent = napakaBesedilo(r.error); btn.disabled = false; btn.classList.remove('nalaga'); return; }
+      logDodaj('Statistika', nov ? 'Strošek dodan' : 'Strošek urejen', strVrsta(zapis.vrsta) + ' · ' + datum(zapis.datum) + ' · ' + cenaFmt(zapis.znesek));
+      zapri();
+      try { await strNalozi(); } catch (e) {}
+      strOsvezi();
+    });
+    var b = g('[data-brisi]');
+    if (b) b.addEventListener('click', async function () {
+      var ok = await potrdiModal({ naslov: 'Izbriši strošek?', sporocilo: strVrsta(rec.vrsta) + ' · ' + datum(rec.datum) + ' · ' + cenaFmt(rec.znesek), potrdi: 'Izbriši', nevarno: true });
+      if (!ok) return;
+      var r = await sb.from('stroski').update({ deleted_at: new Date().toISOString() }).eq('id', rec.id);
+      if (r.error) { toast(napakaBesedilo(r.error)); return; }
+      logDodaj('Statistika', 'Strošek izbrisan', strVrsta(rec.vrsta) + ' · ' + datum(rec.datum) + ' · ' + cenaFmt(rec.znesek));
+      zapri();
+      try { await strNalozi(); } catch (e) {}
+      strOsvezi();
+    });
+    setTimeout(function () { var z = g('[data-znesek]'); if (z) z.focus(); }, 80);
+  }
+
   async function risiUcinek(prefetch) {
     var box = $('ucList'); if (!box) return;
     if (prefetch && _ucNal) return;   // že nalaga
@@ -4111,7 +4252,10 @@
       '<span class="pris-hbtns"><button type="button" class="cgrp-btn ghost uc-izvoz">Izvozi</button></span></div>' +
       tbl + '</div>';
 
-    box.innerHTML = top + ev;
+    _strKgObd = kgMon; _strObdLbl = rangeLbl;
+    box.innerHTML = top + ev + strHtml(kgMon, rangeLbl);
+    strVezi(box);
+    if (STROSKI === null && strSme()) strNalozi().then(strOsvezi, function () {});
     // Napisi se redčijo po dejanski širini — šele ko je vsebina v dokumentu.
     try { ucBarsFit(box); } catch (e) {}
     var _svg3d = box.querySelector('.uc-krog-oder');

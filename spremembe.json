@@ -1,5 +1,15 @@
 [
  {
+  "v": "5.10",
+  "d": "2026-11-17",
+  "c": "2026-11-17T15:38:53+01:00",
+  "t": [
+   "Statistika → Stroški (čisto spodaj, za izbrano obdobje): stroški na kg opranega perila, zraven promet na kg in razlika, oboje brez DDV.",
+   "Razčlenitev po vrstah: pralna sredstva, voda, elektrika, plin, servis, najemnina, plače, drugo. Pri vsaki je poraba na kg (npr. litri vode na kg, grami sredstva na kg). Gorivo se vzame iz razdelka Gorivo.",
+   "Vnose dodaš z »+«, urejaš ali brišeš s klikom na vnos. Vidi in vpisuje vodstvo, enako kot pri Gorivu."
+  ]
+ },
+ {
   "v": "5.09",
   "d": "2026-11-17",
   "c": "2026-11-17T15:27:45+01:00",

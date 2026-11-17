@@ -3450,6 +3450,32 @@ html.v5:not(.sc-sam) .auth::after{bottom:0;}
 .v5 .rf-kos-modal .rf-ozn .cgrp-btn{width:100%;justify-content:center;}
 .v5 .rf-ozn .cgrp-btn.on{background:var(--ink);border-color:var(--ink);color:var(--bg);}
 
+/* ══════════ STROŠKI NA KG (5.10) — Statistika, zadnja kartica ══════════ */
+.v5 .uc-stroski{margin-top:18px;}
+.v5 .uc-str-povz{margin:4px 0 18px;}
+.v5 .uc-str-glavno{margin:0;font-size:var(--fs-15);color:var(--mid);}
+.v5 .uc-str-glavno b{margin-right:6px;font-size:var(--fs-24);font-weight:600;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;}
+.v5 .uc-str-prim{margin:6px 0 0;font-size:var(--fs-14);color:var(--mid);font-variant-numeric:tabular-nums;}
+.v5 .uc-str-prim b{font-weight:600;color:var(--ink);}
+.v5 .uc-str-prim b.uc-str-minus{color:var(--st-bad-ink);}
+.v5 .uc-str-tbl td.uc-str-por{color:var(--mid);font-size:var(--fs-13);font-variant-numeric:tabular-nums;}
+.v5 .uc-str-prazno{margin:4px 2px 0;}
+.v5 .uc-str-vnosi{margin-top:16px;border-top:1px solid var(--line);padding-top:10px;}
+.v5 .uc-str-vnosi summary{cursor:pointer;padding:8px 2px;font-size:var(--fs-14);font-weight:500;color:var(--ink);list-style:none;}
+.v5 .uc-str-vnosi summary::-webkit-details-marker{display:none;}
+.v5 .uc-str-vnosi summary::after{content:"›";display:inline-block;margin-left:8px;color:var(--mid);transition:transform .2s var(--gib,ease);}
+.v5 .uc-str-vnosi[open] summary::after{transform:rotate(90deg);}
+.v5 .uc-str-vrst{cursor:pointer;}
+@media(hover:hover){ .v5 .uc-str-vrst:hover td{background:var(--green-m);} }
+.v5 .str-modal{max-width:480px;}
+.v5 .uc-str-por-m{display:none;}
+.v5 .uc-stroski .pris-h{flex-wrap:nowrap;flex-direction:row;align-items:flex-start;justify-content:space-between;}
+@media(max-width:560px){
+  .v5 .uc-str-tbl .uc-str-por{display:none;}
+  .v5 .uc-str-por-m{display:block;margin-top:3px;font-size:var(--fs-12);color:var(--mid);font-variant-numeric:tabular-nums;}
+  .v5 .uc-str-glavno b{display:block;margin:0 0 2px;}
+}
+
 /* ══════════ REKLAMACIJE (5.08) — evidenca; okno: podrobnosti, fotografije, dejanja; obrazec v istem oknu ══════════ */
 .okno .rekl-okno{padding:20px 24px 24px;}
 @media(max-width:560px){ .okno .rekl-okno{padding:14px 16px 18px;} }
