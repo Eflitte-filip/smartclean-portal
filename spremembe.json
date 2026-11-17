@@ -1,5 +1,15 @@
 [
  {
+  "v": "5.12",
+  "d": "2026-11-17",
+  "c": "2026-11-17T16:11:34+01:00",
+  "t": [
+   "Dostave so zdaj koledar voženj, kot v iCloudu: mesečni pogled (Po–Ne) z urami in strankami v dnevih (na telefonu oznake pod številko), izbran dan pa ima seznam postaj z uro, naslovom in stanjem.",
+   "»Vožnja« doda stranko na datum. Neobvezno je ura, ponavljanje (vsak teden na izbrane dni, vsaka 2 tedna, vsak mesec) z datumom konca in opomba za voznika.",
+   "Okno postaje ima zemljevid, spremne liste za ta dan in gumbe Opravljeno, Uredi vožnjo ter »Izpusti ta dan«, ko vožnja izjemoma odpade."
+  ]
+ },
+ {
   "v": "5.11",
   "d": "2026-11-17",
   "c": "2026-11-17T15:50:44+01:00",

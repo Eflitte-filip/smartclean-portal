@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.11 · BETA';
+  var APP_VERZIJA = '5.12 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -8812,206 +8812,240 @@
     }
   }
 
-  /* ══════════ NAČRT DOSTAV (5.11) — Spremni listi → Dostave ══════════
-     Urnik: za vsako stranko dnevi dostave (1 = ponedeljek … 7 = nedelja), vrstni red na poti in opomba za voznika.
-     Dan: postaje izbranega dne po vrstnem redu (kartice; barva = stanje: zelena opravljeno, oranžna izredna, siva čaka).
-     Klik odpre okno: naslov z zemljevidom, opomba, spremni listi stranke za ta dan, Opravljeno (kdaj, kdo).
-     »Dostava« doda izredno postajo samo za ta dan. */
-  var DOST = { dan: null, urnik: null, zapisi: null, gen: 0 };
+  /* ══════════ KOLEDAR VOŽENJ (5.12) — Spremni listi → Dostave ══════════
+     Kot iCloud koledar (lastnik, 2026-11-17): mesec Po–Ne, v dnevu stranke tega dne; izbran dan ima seznam postaj
+     (ura, stranka, naslov, stanje). Vožnja = stranka na datum, lahko s ponavljanjem (vsak teden na izbrane dni,
+     vsaka 2 tedna, vsak mesec) do konca. Zapis v »dostave« za dan in stranko: opravljeno (kdaj, kdo) ali izpuščena
+     (ta dan izjemoma odpade). Isti podatki bodo vir za voznikovo aplikacijo (dostava.smartclean.si). */
+  var DOST = { dan: null, mesec: null, voznje: null, zapisi: null, obseg: null, gen: 0 };
   var DOST_DNEVI = [[1, 'Po'], [2, 'To'], [3, 'Sr'], [4, 'Če'], [5, 'Pe'], [6, 'So'], [7, 'Ne']];
+  var DOST_PON = [['ne', 'Ne ponavlja se'], ['tedensko', 'Vsak teden'], ['2tedna', 'Vsaka 2 tedna'], ['mesecno', 'Vsak mesec']];
   function dostDanTedna(iso) { return new Date(iso + 'T00:00:00').getDay() || 7; }
-  async function dostNalozi() {
-    var dan = DOST.dan, g = ++DOST.gen;
-    var r = await Promise.all([
-      DOST.urnik ? Promise.resolve(null) : sb.from('dostave_urnik').select('org_id,dnevi,vrstni_red,opomba'),
-      sb.from('dostave').select('id,datum,org_id,izredna,opravljeno_at,opravil,opomba').eq('datum', dan).is('deleted_at', null)
-    ]);
-    if (r[0] && r[0].error) throw r[0].error;
-    if (r[1].error) throw r[1].error;
-    if (g !== DOST.gen) return false;
-    if (r[0]) { var m = {}; (r[0].data || []).forEach(function (x) { m[x.org_id] = x; }); DOST.urnik = m; }
-    DOST.zapisi = r[1].data || [];
+  function dostPonedeljek(iso) { var d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() - (dostDanTedna(iso) - 1)); return d; }
+  function dostDniVoznje(v) { return (v.dnevi && v.dnevi.length) ? v.dnevi : [dostDanTedna(v.zacetek)]; }
+  function dostVoznjaNaDan(v, iso) {
+    if (iso < v.zacetek || (v.konec && iso > v.konec)) return false;
+    if (v.ponavljanje === 'ne') return iso === v.zacetek;
+    if (v.ponavljanje === 'mesecno') return +iso.slice(8) === +v.zacetek.slice(8);
+    if (dostDniVoznje(v).indexOf(dostDanTedna(iso)) < 0) return false;
+    if (v.ponavljanje === '2tedna') return Math.round((dostPonedeljek(iso) - dostPonedeljek(v.zacetek)) / 6048e5) % 2 === 0;
     return true;
   }
-  // postaje dne: stranke po urniku + izredne (zapis za ta dan); po vrstnem redu na poti, izredne na koncu
-  function dostPostaje() {
-    var wd = dostDanTedna(DOST.dan), po = {}, U = DOST.urnik || {};
-    ORGSEZNAM.forEach(function (o) { var u = U[o.id]; if (u && (u.dnevi || []).indexOf(wd) >= 0 && !ORGNEAKT[o.id]) po[o.id] = { org: o, urnik: u, zapis: null }; });
-    (DOST.zapisi || []).forEach(function (z) {
-      var o = ORGSEZNAM.filter(function (x) { return x.id === z.org_id; })[0]; if (!o) return;
-      (po[z.org_id] || (po[z.org_id] = { org: o, urnik: U[z.org_id] || null, zapis: null })).zapis = z;
+  function dostPonOpis(v) {
+    if (!v || v.ponavljanje === 'ne') return 'enkratna';
+    var dn = dostDniVoznje(v).map(function (d) { return DOST_DNEVI[d - 1][1]; }).join(', ');
+    return (v.ponavljanje === 'mesecno' ? 'vsak mesec ' + (+v.zacetek.slice(8)) + '.' : (v.ponavljanje === '2tedna' ? 'vsaka 2 tedna: ' : 'vsak teden: ') + dn) + (v.konec ? ' · do ' + datum(v.konec) : '');
+  }
+  // dnevi mreže meseca: od ponedeljka pred 1. do nedelje po zadnjem (cele vrstice)
+  function dostMreza(mesec) {
+    var start = dostPonedeljek(mesec + '-01'), y = +mesec.slice(0, 4), m = +mesec.slice(5, 7);
+    var zadnji = new Date(y, m, 0), konec = new Date(zadnji); konec.setDate(zadnji.getDate() + (7 - (zadnji.getDay() || 7)));
+    var dni = [];
+    for (var d = new Date(start); d <= konec; d.setDate(d.getDate() + 1)) dni.push(isoLokalno(d));
+    return dni;
+  }
+  async function dostNalozi() {
+    var dni = dostMreza(DOST.mesec), od = dni[0], do_ = dni[dni.length - 1], g = ++DOST.gen;
+    var r = await Promise.all([
+      sb.from('dostave_voznje').select('id,org_id,zacetek,ura,ponavljanje,dnevi,konec,opomba').is('deleted_at', null),
+      sb.from('dostave').select('id,datum,org_id,voznja_id,izredna,izpuscena,opravljeno_at,opravil,opomba').gte('datum', od).lte('datum', do_).is('deleted_at', null)
+    ]);
+    if (r[0].error) throw r[0].error;
+    if (r[1].error) throw r[1].error;
+    if (g !== DOST.gen) return false;
+    DOST.voznje = r[0].data || [];
+    var z = {}; (r[1].data || []).forEach(function (x) { z[x.datum + '|' + x.org_id] = x; });
+    DOST.zapisi = z; DOST.obseg = [od, do_];
+    return true;
+  }
+  function dostOrg(id) { return ORGSEZNAM.filter(function (o) { return o.id === id; })[0] || null; }
+  // postaje dne: vožnje, ki padejo na ta dan (brez izpuščenih); opravljene brez vožnje ostanejo vidne
+  function dostPostaje(iso) {
+    var po = {}, Z = DOST.zapisi || {};
+    (DOST.voznje || []).forEach(function (v) {
+      if (!dostVoznjaNaDan(v, iso)) return;
+      var o = dostOrg(v.org_id), z = Z[iso + '|' + v.org_id]; if (!o || (z && z.izpuscena)) return;
+      var ura = v.ura ? String(v.ura).slice(0, 5) : '';
+      if (!po[v.org_id] || (ura && (!po[v.org_id].ura || ura < po[v.org_id].ura))) po[v.org_id] = { org: o, v: v, ura: ura, zapis: z || null };
+    });
+    Object.keys(Z).forEach(function (k) {
+      var z = Z[k]; if (z.datum !== iso || z.izpuscena || !z.opravljeno_at || po[z.org_id]) return;
+      var o = dostOrg(z.org_id); if (o) po[z.org_id] = { org: o, v: null, ura: '', zapis: z };
     });
     return Object.keys(po).map(function (k) { return po[k]; }).sort(function (a, b) {
-      var ia = a.zapis && a.zapis.izredna && !(a.urnik && (a.urnik.dnevi || []).indexOf(wd) >= 0), ib = b.zapis && b.zapis.izredna && !(b.urnik && (b.urnik.dnevi || []).indexOf(wd) >= 0);
-      if (ia !== ib) return ia ? 1 : -1;
-      var ra = a.urnik && a.urnik.vrstni_red != null ? a.urnik.vrstni_red : 1e6, rb = b.urnik && b.urnik.vrstni_red != null ? b.urnik.vrstni_red : 1e6;
-      return ra - rb || a.org.name.localeCompare(b.org.name, 'sl', { sensitivity: 'base' });
+      return (a.ura || '99').localeCompare(b.ura || '99') || a.org.name.localeCompare(b.org.name, 'sl', { sensitivity: 'base' });
     });
   }
-  function dostListi(org) { return LISTI.filter(function (l) { return l.org_id === org && l.doc_date === DOST.dan; }); }
+  function dostListi(org, iso) { return LISTI.filter(function (l) { return l.org_id === org && l.doc_date === iso; }); }
   async function risiDostave() {
     var box = $('dostList'); if (!box) return;
     if (!DOST.dan) DOST.dan = danes10();
+    if (!DOST.mesec) DOST.mesec = DOST.dan.slice(0, 7);
     if (!box.dataset.zgr) {
       box.dataset.zgr = '1';
-      var nb = $('dostNovaBtn'); if (nb) nb.addEventListener('click', dostIzredna);
+      var nb = $('dostNovaBtn'); if (nb) nb.addEventListener('click', function () { dostObrazec(null); });
     }
     { var nb2 = $('dostNovaBtn'); if (nb2) nb2.classList.toggle('hidden', !sme('dostave', 'w')); }
-    dostRisi(true);
+    dostRisi();
     try { if (await dostNalozi()) dostRisi(); }
-    catch (e) { var t = box.querySelector('.dost-telo'); if (t && !box.dataset.loaded) t.innerHTML = '<div class="rows"><div class="empty"><h3>Nalaganje ni uspelo</h3><p class="u-sub">' + escape_(napakaBesedilo(e)) + '</p></div></div>'; }
+    catch (e) { var p = box.querySelector('.dost-dan-pan'); if (p) p.innerHTML = '<p class="u-sub">' + escape_(napakaBesedilo(e)) + '</p>'; }
   }
-  function dostRisi(nalaga) {
+  function dostRisi() {
     var box = $('dostList'); if (!box) return;
-    var danes = DOST.dan === danes10();
-    var glava = '<div class="pris-barvrsta dost-glava"><div class="pris-datum">' +
-      '<button type="button" class="pris-nav" data-dnav="-1" aria-label="Prejšnji dan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-      '<input type="date" id="dostDan" value="' + escape_(DOST.dan) + '" aria-label="Dan">' +
-      '<button type="button" class="pris-nav" data-dnav="1" aria-label="Naslednji dan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>' +
-      (danes ? '' : '<button type="button" class="dat-danes" data-ddanes>Danes</button>') + '</div></div>';
-    var telo;
-    if (nalaga && (DOST.zapisi === null || DOST.urnik === null)) telo = NALAGANJE;
-    else {
-      var ps = dostPostaje(), opr = ps.filter(function (p) { return p.zapis && p.zapis.opravljeno_at; }).length;
-      $('dostPod').textContent = ps.length ? opr + ' / ' + ps.length + ' opravljenih' : '';
-      if (!ps.length) telo = '<div class="rows"><div class="empty"><h3>' + (Object.keys(DOST.urnik || {}).length ? 'Ta dan ni dostav' : 'Urnik dostav še ni nastavljen') + '</h3>' +
-        (!Object.keys(DOST.urnik || {}).length && sme('dostave', 'w') ? '<button type="button" class="btn ghost" data-durnik style="margin-top:14px">Nastavi urnik</button>' : '') + '</div></div>';
-      else telo = '<div class="rows dost-postaje">' + ps.map(function (p, i) {
-        var z = p.zapis, opravljeno = !!(z && z.opravljeno_at), izredna = !!(z && z.izredna);
-        var barva = opravljeno ? BARVE_STANJA.green : izredna ? BARVE_STANJA.yellow : null;
-        var n = dostListi(p.org.id).length;
-        var stanje = opravljeno ? 'opravljeno ' + uraMin(z.opravljeno_at) : (izredna ? 'izredna' : 'čaka') + (n ? ' · ' + sklonListov(n) : '');
-        var pod = p.org.address || (p.urnik && p.urnik.opomba) || lepNaziv(p.org.legal_name || p.org.name);
-        return '<div class="lcell' + (opravljeno ? ' dost-opr' : '') + '"><button class="row" type="button" data-dost="' + escape_(p.org.id) + '" style="' + naslovnica(barva, p.org.id) + '" aria-haspopup="dialog">' +
-          '<span><span class="row-name"><span class="row-nm">' + escape_(p.org.name) + '</span></span><br><span class="row-legal">' + escape_(pod) + '</span></span>' +
-          '<span class="num">' + escape_(stanje) + '</span><span class="chev" aria-hidden="true">›</span></button></div>';
+    var dni = dostMreza(DOST.mesec), danes = danes10();
+    var nalaga = DOST.voznje === null || !DOST.obseg || DOST.obseg[0] !== dni[0];
+    var ime = ucMesecIme(DOST.mesec); ime = ime.charAt(0).toUpperCase() + ime.slice(1);
+    var puscica = function (s) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="' + s + '"/></svg>'; };
+    var glava = '<div class="dost-kol-glava"><h3 class="dost-mesec">' + escape_(ime) + '</h3><span class="dost-kol-nav">' +
+      '<button type="button" class="pris-nav" data-mnav="-1" aria-label="Prejšnji mesec">' + puscica('M15 6l-6 6 6 6') + '</button>' +
+      (DOST.dan !== danes || DOST.mesec !== danes.slice(0, 7) ? '<button type="button" class="dat-danes" data-mdanes>Danes</button>' : '') +
+      '<button type="button" class="pris-nav" data-mnav="1" aria-label="Naslednji mesec">' + puscica('M9 6l6 6-6 6') + '</button></span></div>';
+    var mreza = '<div class="dost-mreza">' + DOST_DNEVI.map(function (d) { return '<span class="dost-mreza-h">' + d[1] + '</span>'; }).join('') +
+      dni.map(function (iso) {
+        var ps = nalaga ? [] : dostPostaje(iso), drug = iso.slice(0, 7) !== DOST.mesec;
+        var sez = ps.slice(0, 3).map(function (p) { var o = !!(p.zapis && p.zapis.opravljeno_at); return '<span class="dost-d-v' + (o ? ' opr' : '') + '">' + (p.ura ? '<b>' + p.ura + '</b> ' : '') + escape_(p.org.name) + '</span>'; }).join('') +
+          (ps.length > 3 ? '<span class="dost-d-vec">še ' + (ps.length - 3) + '</span>' : '');
+        var oz = ps.length ? '<span class="dost-d-oz" aria-hidden="true">' + ps.slice(0, 4).map(function (p) { return '<i' + (p.zapis && p.zapis.opravljeno_at ? ' class="opr"' : '') + '></i>'; }).join('') + '</span>' : '';
+        return '<button type="button" class="dost-d' + (drug ? ' drug' : '') + (iso === danes ? ' danes' : '') + (iso === DOST.dan ? ' izbran' : '') + '" data-d="' + iso + '" aria-label="' + escape_(datum(iso) + (ps.length ? ', ' + sklonPostaj(ps.length) : '')) + '"' + (iso === DOST.dan ? ' aria-current="date"' : '') + '>' +
+          '<span class="dost-d-st">' + (+iso.slice(8)) + '</span>' + oz + '<span class="dost-d-sez">' + sez + '</span></button>';
       }).join('') + '</div>';
-      box.dataset.loaded = '1';
-    }
-    var imaUrnik = Object.keys(DOST.urnik || {}).length;
-    box.innerHTML = glava + '<div class="dost-telo">' + telo + '</div>' +
-      (imaUrnik && sme('dostave', 'w') ? '<p class="dost-urnik-p"><button type="button" class="link-btn" data-durnik>Urnik dostav</button></p>' : '');   // redko dejanje: povezava pod seznamom
-    box.querySelectorAll('[data-dnav]').forEach(function (b) { b.addEventListener('click', function () { var d = new Date(DOST.dan + 'T00:00:00'); d.setDate(d.getDate() + parseInt(b.dataset.dnav, 10)); dostNaDan(isoLokalno(d)); }); });
-    var di = $('dostDan'); if (di) di.addEventListener('change', function () { if (this.value) dostNaDan(this.value); });
-    var dd = box.querySelector('[data-ddanes]'); if (dd) dd.addEventListener('click', function () { dostNaDan(danes10()); });
-    box.querySelectorAll('[data-durnik]').forEach(function (b) { b.addEventListener('click', function () { dostUrnik(b); }); });
+    var ps = nalaga ? null : dostPostaje(DOST.dan), opr = ps ? ps.filter(function (p) { return p.zapis && p.zapis.opravljeno_at; }).length : 0;
+    $('dostPod').textContent = ps && ps.length && DOST.dan === danes ? opr + ' / ' + ps.length + ' opravljenih danes' : '';
+    var panel = '<div class="dost-dan-pan"><div class="dost-dan-h"><h3 class="sec-h">' + escape_(vuDanNaziv(DOST.dan)) + '</h3>' +
+      (ps && ps.length ? '<span class="dost-dan-st">' + opr + ' / ' + ps.length + ' opravljenih</span>' : '') + '</div>' +
+      (ps === null ? NALAGANJE : !ps.length ? '<p class="u-sub dost-prazno">Ta dan ni voženj.</p>' : '<div class="dost-postaje">' + ps.map(function (p) {
+        var o = !!(p.zapis && p.zapis.opravljeno_at), n = dostListi(p.org.id, DOST.dan).length;
+        return '<button type="button" class="dost-stop' + (o ? ' opr' : '') + '" data-dost="' + escape_(p.org.id) + '" aria-haspopup="dialog"><span class="dost-stop-ura">' + escape_(p.ura) + '</span>' +
+          '<span class="dost-stop-t"><span class="dost-stop-ime">' + escape_(p.org.name) + '</span>' + (p.org.address ? '<span class="dost-stop-nasl">' + escape_(p.org.address) + '</span>' : '') + '</span>' +
+          '<span class="dost-stop-st">' + escape_(o ? 'opravljeno ' + uraMin(p.zapis.opravljeno_at) : (n ? sklonListov(n) : '')) + '</span><span class="chev" aria-hidden="true">›</span></button>';
+      }).join('') + '</div>') + '</div>';
+    box.innerHTML = '<div class="dost-kol">' + glava + mreza + '</div>' + panel;
+    box.querySelectorAll('[data-mnav]').forEach(function (b) { b.addEventListener('click', function () { var y = +DOST.mesec.slice(0, 4), m = +DOST.mesec.slice(5, 7) - 1 + parseInt(b.dataset.mnav, 10); var d = new Date(y, m, 1); dostNaMesec(isoLokalno(d).slice(0, 7)); }); });
+    var md = box.querySelector('[data-mdanes]'); if (md) md.addEventListener('click', function () { DOST.dan = danes10(); dostNaMesec(DOST.dan.slice(0, 7)); });
+    box.querySelectorAll('[data-d]').forEach(function (b) { b.addEventListener('click', function () {
+      DOST.dan = b.dataset.d;
+      if (DOST.dan.slice(0, 7) !== DOST.mesec) dostNaMesec(DOST.dan.slice(0, 7)); else dostRisi();
+    }); });
     box.querySelectorAll('[data-dost]').forEach(function (b) { b.addEventListener('click', function () { dostOdpri(b); }); });
     oknoPoIzrisu();
   }
-  async function dostNaDan(dan) {
-    DOST.dan = dan; DOST.zapisi = null; dostRisi(true);
+  function sklonPostaj(n) { var m = n % 100; return n + ' ' + (m === 1 ? 'postaja' : m === 2 ? 'postaji' : (m === 3 || m === 4) ? 'postaje' : 'postaj'); }
+  async function dostNaMesec(mesec) {
+    DOST.mesec = mesec; dostRisi();
     try { if (await dostNalozi()) dostRisi(); } catch (e) { toast(napakaBesedilo(e)); }
   }
-  function dostPostaja(org) { return dostPostaje().filter(function (p) { return p.org.id === org; })[0] || null; }
+  async function dostOsvezi() { try { await dostNalozi(); } catch (e) {} dostRisi(); }
+  function dostPostaja(org) { return dostPostaje(DOST.dan).filter(function (p) { return p.org.id === org; })[0] || null; }
   function dostNajdi(org) { return document.querySelector('#dostList [data-dost="' + String(org).replace(/"/g, '\\"') + '"]'); }
   function dostOdpri(btn) {
     if (_okno) return;
-    var org = btn.dataset.dost, box = document.createElement('div'); box.className = 'dost-okno';
+    var org = btn.dataset.dost, dan = DOST.dan, box = document.createElement('div'); box.className = 'dost-okno';
     dostRisiOkno(box, org);
-    oknoOdpri(btn, box, function () { return dostNajdi(org); }, {
-      glava: function () { var p = dostPostaja(org), d = document.createElement('div'); d.innerHTML = '<h3 class="sec-h">' + escape_(p ? p.org.name : '') + '</h3><div class="okno-glava-sub">' + escape_(datum(DOST.dan)) + '</div>'; return d; }
+    oknoOdpri(btn, box, function () { return DOST.dan === dan ? dostNajdi(org) : null; }, {
+      glava: function () { var o = dostOrg(org), d = document.createElement('div'); d.innerHTML = '<h3 class="sec-h">' + escape_(o ? o.name : '') + '</h3><div class="okno-glava-sub">' + escape_(vuDanNaziv(dan)) + '</div>'; return d; }
     });
   }
   function dostRisiOkno(box, org) {
     var p = dostPostaja(org); if (!p) return;
-    var z = p.zapis, w = sme('dostave', 'w'), listi = dostListi(org), opr = !!(z && z.opravljeno_at), naslov = p.org.address || '';
+    var z = p.zapis, v = p.v, w = sme('dostave', 'w'), listi = dostListi(org, DOST.dan), opr = !!(z && z.opravljeno_at), naslov = p.org.address || '';
     box.innerHTML = '<div class="dost-det"><dl class="okno-dl">' +
       (naslov ? '<dt>Naslov</dt><dd>' + escape_(naslov) + '</dd>' : '') +
-      (p.urnik && p.urnik.opomba ? '<dt>Opomba</dt><dd class="rekl-besedilo">' + escape_(p.urnik.opomba) + '</dd>' : '') +
+      (p.ura ? '<dt>Ura</dt><dd>' + escape_(p.ura) + '</dd>' : '') +
+      (v ? '<dt>Vožnja</dt><dd>' + escape_(dostPonOpis(v)) + '</dd>' : '') +
+      (v && v.opomba ? '<dt>Opomba</dt><dd class="rekl-besedilo">' + escape_(v.opomba) + '</dd>' : '') +
       '<dt>Spremni listi</dt><dd>' + (listi.length ? escape_(listi.map(function (l) { return l.number + ' · ' + sklonKosov(l.total_pieces || 0); }).join(', ')) : '<span class="u-sub">za ta dan ni lista</span>') + '</dd>' +
-      '<dt>Stanje</dt><dd>' + (opr ? 'Opravljeno ob ' + escape_(uraMin(z.opravljeno_at)) + (z.opravil ? ' · ' + escape_(z.opravil) : '') : (z && z.izredna ? 'Izredna · čaka' : 'Čaka')) + '</dd></dl>' +
+      '<dt>Stanje</dt><dd>' + (opr ? 'Opravljeno ob ' + escape_(uraMin(z.opravljeno_at)) + (z.opravil ? ' · ' + escape_(z.opravil) : '') : 'Čaka') + '</dd></dl>' +
       '<div class="u-acts dost-akc">' +
         (naslov ? '<a class="dost-zemljevid" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(naslov) + '" target="_blank" rel="noopener">Zemljevid</a>' : '') +
-        (w && z && z.izredna && !opr ? '<button type="button" data-dodstrani>Odstrani</button>' : '') +
+        (w && v && !opr ? (v.ponavljanje === 'ne' ? '<button type="button" class="danger" data-dbrisi>Izbriši vožnjo</button>' : '<button type="button" data-dizpusti>Izpusti ta dan</button>') : '') +
+        (w && v ? '<button type="button" data-duredi>Uredi vožnjo</button>' : '') +
         (w ? (opr ? '<button type="button" data-dopr="0">Ni opravljeno</button>' : '<button type="button" class="ur-save" data-dopr="1">Opravljeno</button>') : '') +
       '</div></div>';
-    var b = box.querySelector('[data-dopr]');
-    if (b) b.addEventListener('click', async function () {
-      b.disabled = true; b.classList.add('nalaga');
-      var vkl = b.dataset.dopr === '1', zap = { opravljeno_at: vkl ? new Date().toISOString() : null, opravil: vkl ? (JAZIME || null) : null };
-      var r = z ? await sb.from('dostave').update(zap).eq('id', z.id) : await sb.from('dostave').insert(Object.assign({ datum: DOST.dan, org_id: org, izredna: false }, zap)).select('id').single();
-      if (r.error) { toast(napakaBesedilo(r.error)); b.disabled = false; b.classList.remove('nalaga'); return; }
-      logDodaj('Dostave', vkl ? 'Opravljeno' : 'Ni opravljeno', p.org.name + ' · ' + datum(DOST.dan));
-      try { await dostNalozi(); } catch (e) {}
-      dostRisiOkno(box, org); dostRisi(); if (_okno) oknoGlava();
-    });
-    var o = box.querySelector('[data-dodstrani]');
-    if (o) o.addEventListener('click', async function () {
-      var r = await sb.from('dostave').update({ deleted_at: new Date().toISOString() }).eq('id', z.id);
-      if (r.error) { toast(napakaBesedilo(r.error)); return; }
-      logDodaj('Dostave', 'Izredna odstranjena', p.org.name + ' · ' + datum(DOST.dan));
-      if (_okno) oknoZapri();
-      try { await dostNalozi(); } catch (e) {}
-      dostRisi();
-    });
-  }
-  // izredna dostava: stranka samo za izbrani dan
-  async function dostIzredna() {
-    var v = {}; dostPostaje().forEach(function (p) { v[p.org.id] = 1; });
-    var opc = ORGSEZNAM.filter(function (o) { return !v[o.id] && !ORGNEAKT[o.id]; }).map(function (o) { return '<option value="' + escape_(o.id) + '">' + escape_(o.name) + '</option>'; }).join('');
-    var back = document.createElement('div'); back.className = 'sc-modal-back';
-    back.innerHTML = '<div class="sc-modal" role="dialog" aria-modal="true"><h4>Izredna dostava · ' + escape_(datum(DOST.dan)) + '</h4><div class="ur-form">' +
-      '<label class="ur-f"><span>Stranka</span><select data-org><option value="">Izberi stranko</option>' + opc + '</select></label>' +
-      '<label class="ur-f"><span>Opomba</span><input type="text" data-opomba maxlength="200"></label><p class="u-sub ur-msg" data-msg></p></div>' +
-      '<div class="sc-modal-acts"><button type="button" class="sc-modal-btn ghost" data-no>Prekliči</button><button type="button" class="sc-modal-btn primary" data-yes>Dodaj</button></div></div>';
-    document.body.appendChild(back); _modalA11y(back); requestAnimationFrame(function () { back.classList.add('show'); });
-    var done = false;
-    function zapri() { if (done) return; done = true; back.classList.remove('show'); document.removeEventListener('keydown', onk, true); setTimeout(function () { back.remove(); }, 180); _modalVrniFokus(); }
-    function onk(e) { if (e.key === 'Escape') { e.stopPropagation(); zapri(); } }
-    document.addEventListener('keydown', onk, true);
-    back.addEventListener('click', function (e) { if (e.target === back) zapri(); });
-    back.querySelector('[data-no]').addEventListener('click', zapri);
-    back.querySelector('[data-yes]').addEventListener('click', async function () {
-      var org = back.querySelector('[data-org]').value, msg = back.querySelector('[data-msg]');
-      if (!org) { msg.textContent = 'Izberi stranko.'; return; }
-      var r = await sb.from('dostave').insert({ datum: DOST.dan, org_id: org, izredna: true, opomba: back.querySelector('[data-opomba]').value.trim() || null }).select('id').single();
-      if (r.error) { msg.textContent = napakaBesedilo(r.error); return; }
-      logDodaj('Dostave', 'Izredna dodana', (ORGIME[org] || '') + ' · ' + datum(DOST.dan));
-      zapri();
-      try { await dostNalozi(); } catch (e) {}
-      dostRisi();
-    });
-  }
-  // urnik: vse stranke, dnevi (preklopi), vrstni red in opomba; vsaka sprememba se shrani takoj
-  function dostUrnik(gumb) {
-    if (_okno) return;
-    var w = sme('dostave', 'w'), U = DOST.urnik || {};
-    var box = document.createElement('div'); box.className = 'dost-urnik';
-    var vrstice = ORGSEZNAM.filter(function (o) { return !ORGNEAKT[o.id]; }).slice().sort(function (a, b) {
-      var ra = U[a.id] && U[a.id].vrstni_red != null ? U[a.id].vrstni_red : 1e6, rb = U[b.id] && U[b.id].vrstni_red != null ? U[b.id].vrstni_red : 1e6;
-      return ra - rb || a.name.localeCompare(b.name, 'sl', { sensitivity: 'base' });
-    });
-    box.innerHTML = '<input type="search" class="dost-isci" placeholder="Iskanje strank …" aria-label="Iskanje strank">' +
-      '<div class="dost-ur-sez">' + vrstice.map(function (o) {
-        var u = U[o.id] || {}, dn = u.dnevi || [];
-        return '<div class="dost-ur-v" data-org="' + escape_(o.id) + '" data-ime="' + escape_((o.name + ' ' + (o.legal_name || '')).toLowerCase()) + '">' +
-          '<span class="dost-ur-ime">' + escape_(o.name) + '</span>' +
-          '<span class="dost-ur-dni" role="group" aria-label="Dnevi dostave">' + DOST_DNEVI.map(function (d) { var on = dn.indexOf(d[0]) >= 0; return '<button type="button" class="dost-dan' + (on ? ' on' : '') + '" data-dan="' + d[0] + '" aria-pressed="' + on + '"' + (w ? '' : ' disabled') + '>' + d[1] + '</button>'; }).join('') + '</span>' +
-          '<input type="number" class="dost-ur-red" min="1" step="1" inputmode="numeric" placeholder="#" aria-label="Vrstni red na poti" value="' + (u.vrstni_red != null ? u.vrstni_red : '') + '"' + (w ? '' : ' disabled') + '>' +
-          '<input type="text" class="dost-ur-opo" maxlength="200" placeholder="Opomba za voznika" aria-label="Opomba za voznika" value="' + escape_(u.opomba || '') + '"' + (w ? '' : ' disabled') + '></div>';
-      }).join('') + '</div>';
-    box.querySelector('.dost-isci').addEventListener('input', function () { var q = this.value.trim().toLowerCase(); box.querySelectorAll('.dost-ur-v').forEach(function (v) { v.hidden = !!q && v.dataset.ime.indexOf(q) < 0; }); });
-    async function shrani(v) {
-      var org = v.dataset.org, dnevi = [].map.call(v.querySelectorAll('.dost-dan.on'), function (b) { return +b.dataset.dan; });
-      var red = parseInt(v.querySelector('.dost-ur-red').value, 10), opo = v.querySelector('.dost-ur-opo').value.trim();
-      var zap = { org_id: org, dnevi: dnevi, vrstni_red: red > 0 ? red : null, opomba: opo || null, updated_at: new Date().toISOString() };
-      v.classList.add('shranjujem');
-      var r = await sb.from('dostave_urnik').upsert(zap, { onConflict: 'org_id' });
-      v.classList.remove('shranjujem');
-      if (r.error) { toast(napakaBesedilo(r.error)); return; }
-      (DOST.urnik || (DOST.urnik = {}))[org] = zap;
-      v.classList.add('shranjeno'); setTimeout(function () { v.classList.remove('shranjeno'); }, 900);
-      dostRisi();
+    var g = function (s) { return box.querySelector(s); }, dan = DOST.dan;
+    // zapis za dan in stranko (opravljeno / izpuščena)
+    async function zapisi(sprememba) {
+      var r = z ? await sb.from('dostave').update(sprememba).eq('id', z.id) : await sb.from('dostave').insert(Object.assign({ datum: dan, org_id: org, voznja_id: v ? v.id : null }, sprememba)).select('id').single();
+      if (r.error) { toast(napakaBesedilo(r.error)); return false; }
+      return true;
     }
-    box.addEventListener('click', function (e) {
-      var b = e.target.closest('.dost-dan'); if (!b || b.disabled) return;
-      var on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
-      shrani(b.closest('.dost-ur-v'));
+    if (g('[data-dopr]')) g('[data-dopr]').addEventListener('click', async function () {
+      var b = this, vkl = b.dataset.dopr === '1'; b.disabled = true; b.classList.add('nalaga');
+      if (!await zapisi({ opravljeno_at: vkl ? new Date().toISOString() : null, opravil: vkl ? (JAZIME || null) : null })) { b.disabled = false; b.classList.remove('nalaga'); return; }
+      logDodaj('Dostave', vkl ? 'Opravljeno' : 'Ni opravljeno', p.org.name + ' · ' + datum(dan));
+      await dostOsvezi(); dostRisiOkno(box, org); if (_okno) oknoGlava();
     });
-    box.addEventListener('change', function (e) { if (e.target.matches('.dost-ur-red, .dost-ur-opo')) shrani(e.target.closest('.dost-ur-v')); });
-    oknoOdpri(gumb, box, function () { return document.querySelector('#dostList [data-durnik]'); }, {
-      glava: function () { var h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = 'Urnik dostav'; return h; }
+    if (g('[data-dizpusti]')) g('[data-dizpusti]').addEventListener('click', async function () {
+      if (!await zapisi({ izpuscena: true })) return;
+      logDodaj('Dostave', 'Izpuščeno', p.org.name + ' · ' + datum(dan));
+      if (_okno) oknoZapri();
+      await dostOsvezi(); toast(p.org.name + ' · ' + datum(dan) + ' izpuščeno', { besedilo: 'Razveljavi', ob: async function () { var zz = (DOST.zapisi || {})[dan + '|' + org]; if (zz) { await sb.from('dostave').update({ izpuscena: false }).eq('id', zz.id); dostOsvezi(); } } });
     });
+    if (g('[data-dbrisi]')) g('[data-dbrisi]').addEventListener('click', async function () {
+      var ok = await potrdiModal({ naslov: 'Izbriši vožnjo?', sporocilo: p.org.name + ' · ' + datum(dan), potrdi: 'Izbriši', nevarno: true });
+      if (!ok) return;
+      var r = await sb.from('dostave_voznje').update({ deleted_at: new Date().toISOString() }).eq('id', v.id);
+      if (r.error) { toast(napakaBesedilo(r.error)); return; }
+      logDodaj('Dostave', 'Vožnja izbrisana', p.org.name + ' · ' + datum(dan));
+      if (_okno) oknoZapri();
+      dostOsvezi();
+    });
+    if (g('[data-duredi]')) g('[data-duredi]').addEventListener('click', function () { dostObrazec(v, box, org); });
+  }
+  // obrazec vožnje: v = null → nova (okno iz gumba »Vožnja«, datum = izbran dan); sicer urejanje v odprtem oknu postaje
+  function dostObrazec(v, box, orgPostaje) {
+    var nova = !v; if (nova && _okno) return;
+    var gumb = $('dostNovaBtn');
+    if (nova) box = document.createElement('div'), box.className = 'dost-okno';
+    var opc = ORGSEZNAM.filter(function (o) { return !ORGNEAKT[o.id] || (v && v.org_id === o.id); }).map(function (o) { return '<option value="' + escape_(o.id) + '"' + (v && v.org_id === o.id ? ' selected' : '') + '>' + escape_(o.name) + '</option>'; }).join('');
+    var zac = v ? v.zacetek : DOST.dan, dn = v ? dostDniVoznje(v) : [dostDanTedna(zac)];
+    box.innerHTML = '<div class="ur-form dost-obr">' +
+      '<label class="ur-f"><span>Stranka</span><select data-org>' + (nova ? '<option value="">Izberi stranko</option>' : '') + opc + '</select></label>' +
+      '<div class="ur-grid nl-2"><label class="ur-f"><span>Datum</span><input type="date" data-zacetek value="' + escape_(zac) + '"></label>' +
+      '<label class="ur-f"><span>Ura</span><input type="time" data-ura value="' + escape_(v && v.ura ? String(v.ura).slice(0, 5) : '') + '"></label></div>' +
+      '<label class="ur-f"><span>Ponavljanje</span><select data-pon>' + DOST_PON.map(function (x) { return '<option value="' + x[0] + '"' + ((v ? v.ponavljanje : 'ne') === x[0] ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></label>' +
+      '<div class="ur-f" data-dni-polje><span>Dnevi</span><span class="dost-obr-dni" role="group" aria-label="Dnevi">' + DOST_DNEVI.map(function (d) { var on = dn.indexOf(d[0]) >= 0; return '<button type="button" class="dost-dan' + (on ? ' on' : '') + '" data-dan="' + d[0] + '" aria-pressed="' + on + '">' + d[1] + '</button>'; }).join('') + '</span></div>' +
+      '<label class="ur-f" data-konec-polje><span>Do</span><input type="date" data-konec value="' + escape_(v && v.konec ? v.konec : '') + '"></label>' +
+      '<label class="ur-f"><span>Opomba za voznika</span><input type="text" data-opomba maxlength="200" value="' + escape_(v && v.opomba || '') + '"></label>' +
+      '<p class="u-sub ur-msg" data-msg role="status" aria-live="polite"></p>' +
+      '<div class="u-acts">' + (nova ? '' : '<button type="button" class="danger" data-brisi>Izbriši vožnjo</button>') + '<button type="button" data-preklici>Prekliči</button><button type="button" class="ur-save" data-shrani>' + (nova ? 'Dodaj' : 'Shrani') + '</button></div></div>';
+    var g = function (s) { return box.querySelector(s); };
+    function vidnost() { var p = g('[data-pon]').value; g('[data-dni-polje]').hidden = !(p === 'tedensko' || p === '2tedna'); g('[data-konec-polje]').hidden = p === 'ne'; }
+    vidnost(); g('[data-pon]').addEventListener('change', vidnost);
+    g('[data-zacetek]').addEventListener('change', function () { if (!nova) return; var on = box.querySelectorAll('.dost-obr-dni .dost-dan.on'); if (on.length <= 1) { box.querySelectorAll('.dost-obr-dni .dost-dan').forEach(function (b) { var x = +b.dataset.dan === dostDanTedna(g('[data-zacetek]').value || DOST.dan); b.classList.toggle('on', x); b.setAttribute('aria-pressed', x); }); } });
+    box.querySelector('.dost-obr-dni').addEventListener('click', function (e) { var b = e.target.closest('.dost-dan'); if (!b) return; var on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    g('[data-preklici]').addEventListener('click', function () { if (nova) oknoKoncaj(); else oknoKoncaj(function () { if (_okno) _okno.varuj = null; dostRisiOkno(box, orgPostaje); }); });
+    if (g('[data-brisi]')) g('[data-brisi]').addEventListener('click', async function () {
+      var ok = await potrdiModal({ naslov: 'Izbriši vožnjo?', sporocilo: (ORGIME[v.org_id] || '') + ' · ' + dostPonOpis(v), potrdi: 'Izbriši', nevarno: true });
+      if (!ok) return;
+      var r = await sb.from('dostave_voznje').update({ deleted_at: new Date().toISOString() }).eq('id', v.id);
+      if (r.error) { toast(napakaBesedilo(r.error)); return; }
+      logDodaj('Dostave', 'Vožnja izbrisana', (ORGIME[v.org_id] || '') + ' · ' + dostPonOpis(v));
+      if (_okno) { _okno.varuj = null; oknoZapri(); }
+      dostOsvezi();
+    });
+    g('[data-shrani]').addEventListener('click', async function () {
+      var btn = this, msg = g('[data-msg]'), org = g('[data-org]').value, pon = g('[data-pon]').value, zacetek = g('[data-zacetek]').value, konec = pon === 'ne' ? '' : g('[data-konec]').value;
+      if (!org) { msg.textContent = 'Izberi stranko.'; return; }
+      if (!zacetek) { msg.textContent = 'Izberi datum.'; return; }
+      if (konec && konec < zacetek) { msg.textContent = 'Datum »do« je pred začetkom.'; return; }
+      var dnevi = (pon === 'tedensko' || pon === '2tedna') ? [].map.call(box.querySelectorAll('.dost-obr-dni .dost-dan.on'), function (b) { return +b.dataset.dan; }) : [];
+      if ((pon === 'tedensko' || pon === '2tedna') && !dnevi.length) { msg.textContent = 'Izberi vsaj en dan.'; return; }
+      var zap = { org_id: org, zacetek: zacetek, ura: g('[data-ura]').value || null, ponavljanje: pon, dnevi: dnevi, konec: konec || null, opomba: g('[data-opomba]').value.trim() || null };
+      btn.disabled = true; btn.classList.add('nalaga'); msg.textContent = '';
+      var r = nova ? await sb.from('dostave_voznje').insert(zap).select('id').single() : await sb.from('dostave_voznje').update(zap).eq('id', v.id);
+      if (r.error) { msg.textContent = napakaBesedilo(r.error); btn.disabled = false; btn.classList.remove('nalaga'); return; }
+      logDodaj('Dostave', nova ? 'Vožnja dodana' : 'Vožnja urejena', (ORGIME[org] || '') + ' · ' + dostPonOpis(zap));
+      if (_okno) _okno.varuj = null;
+      if (nova) { if (_okno) oknoZapri(); DOST.dan = zacetek; if (zacetek.slice(0, 7) !== DOST.mesec) { dostNaMesec(zacetek.slice(0, 7)); return; } dostOsvezi(); toast('Vožnja dodana'); }
+      else { await dostOsvezi(); if (dostPostaja(orgPostaje)) dostRisiOkno(box, orgPostaje); else if (_okno) oknoZapri(); }
+    });
+    if (nova) {
+      oknoOdpri(gumb, box, function () { return $('dostNovaBtn'); }, {
+        glava: function () { var h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = 'Nova vožnja'; return h; },
+        varuj: 'Shranim vožnjo?'
+      });
+    } else if (_okno) _okno.varuj = 'Shranim spremembe?';
+    oknoZapomni(box);
   }
 
   /* ══════════ REKLAMACIJE (5.08) — evidenca po strankah ══════════
