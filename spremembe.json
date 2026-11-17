@@ -1,5 +1,14 @@
 [
  {
+  "v": "5.08",
+  "d": "2026-11-17",
+  "c": "2026-11-17T15:06:56+01:00",
+  "t": [
+   "Nov zavihek Stranke → Reklamacije: evidenca izgubljenih, poškodovanih in neočiščenih kosov, napačnih dostav in drugega. Vsaka ima stranko, datum, vrsto, artikel in število kosov, spremni list, opis in fotografije.",
+   "Kartice so oranžne, dokler je reklamacija odprta, in zelene, ko je rešena. Ob »Rešeno« lahko vpišeš rešitev. Filter Odprte / Rešene / Vse, iskanje po stranki, opisu ali številki lista. Samo evidenca, nič se ne zaračuna."
+  ]
+ },
+ {
   "v": "5.07",
   "d": "2026-11-17",
   "c": "2026-11-17T14:46:27+01:00",

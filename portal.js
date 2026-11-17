@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.07 · BETA';
+  var APP_VERZIJA = '5.08 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -893,7 +893,7 @@
   /* ══════════ VLOGE & PRAVICE (Admin — ureja samo lastnik) ══════════ */
   // Razdelki, katerih vidnost/pravice je mogoče nastavljati po vlogah.
   var ADMIN_RAZDELKI = [
-    ['domov', 'Domov'], ['dokumenti', 'Dokumenti'], ['prisotnost', 'Prisotnost'], ['stranke', 'Stranke'],
+    ['domov', 'Domov'], ['dokumenti', 'Dokumenti'], ['prisotnost', 'Prisotnost'], ['stranke', 'Stranke'], ['reklamacije', 'Reklamacije'],
     ['arhiv', 'Spremni listi'], ['cipi', 'Perilo'], ['artikli', 'Cenik & artikli'], ['fakture', 'Fakture'], ['uporabniki', 'Uporabniki'],
     ['statistika', 'Statistika'], ['gorivo', 'Gorivo'], ['konzola', 'Konzola'], ['aplikacija', 'Aplikacije'], ['katalog', 'Katalog']
   ];
@@ -902,11 +902,11 @@
   // Privzete vidne pravice (r,w,x,d) — ujemajo se z obstajajočim obnašanjem.
   function _perm(r, w, x, d) { return { r: !!r, w: !!w, x: !!x, d: !!d }; }
   var ADMIN_PRIVZ = {
-    super: { cipi: _perm(1, 1, 1, 1), gorivo: _perm(1, 1, 1, 1), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(1, 1, 1, 1), uporabniki: _perm(1, 1, 1, 1) },
-    admin: { cipi: _perm(1, 1, 1, 1), gorivo: _perm(1, 1, 1, 1), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(1, 1, 1, 1), uporabniki: _perm(1, 1, 1, 1) },
-    osebje: { cipi: _perm(1, 1, 1, 1), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) },
-    zaposleni: { cipi: _perm(0, 0, 0, 0), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 0, 0, 0), prisotnost: _perm(1, 0, 0, 1), arhiv: _perm(0, 0, 0, 0), katalog: _perm(0, 0, 0, 0), statistika: _perm(0, 0, 0, 0), artikli: _perm(0, 0, 0, 0), stranke: _perm(0, 0, 0, 0), dokumenti: _perm(0, 0, 0, 0), aplikacija: _perm(0, 0, 0, 0), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) },
-    stranka: { cipi: _perm(0, 0, 0, 0), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 0, 0, 0), prisotnost: _perm(0, 0, 0, 0), arhiv: _perm(1, 0, 0, 1), katalog: _perm(1, 0, 0, 0), statistika: _perm(0, 0, 0, 0), artikli: _perm(0, 0, 0, 0), stranke: _perm(0, 0, 0, 0), dokumenti: _perm(0, 0, 0, 0), aplikacija: _perm(0, 0, 0, 0), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) }
+    super: { reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(1, 1, 1, 1), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(1, 1, 1, 1), uporabniki: _perm(1, 1, 1, 1) },
+    admin: { reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(1, 1, 1, 1), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(1, 1, 1, 1), uporabniki: _perm(1, 1, 1, 1) },
+    osebje: { reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) },
+    zaposleni: { reklamacije: _perm(0, 0, 0, 0), cipi: _perm(0, 0, 0, 0), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 0, 0, 0), prisotnost: _perm(1, 0, 0, 1), arhiv: _perm(0, 0, 0, 0), katalog: _perm(0, 0, 0, 0), statistika: _perm(0, 0, 0, 0), artikli: _perm(0, 0, 0, 0), stranke: _perm(0, 0, 0, 0), dokumenti: _perm(0, 0, 0, 0), aplikacija: _perm(0, 0, 0, 0), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) },
+    stranka: { reklamacije: _perm(0, 0, 0, 0), cipi: _perm(0, 0, 0, 0), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 0, 0, 0), prisotnost: _perm(0, 0, 0, 0), arhiv: _perm(1, 0, 0, 1), katalog: _perm(1, 0, 0, 0), statistika: _perm(0, 0, 0, 0), artikli: _perm(0, 0, 0, 0), stranke: _perm(0, 0, 0, 0), dokumenti: _perm(0, 0, 0, 0), aplikacija: _perm(0, 0, 0, 0), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) }
   };
   var ROLE_CFG = null;  // { imena:{...}, perm:{ vloga:{ razdelek:{r,w,x,d} } } }
   function roleIme(v) { return (ROLE_CFG && ROLE_CFG.imena && ROLE_CFG.imena[v]) || ADMIN_IMENA_PRIVZ[v] || v; }
@@ -1308,6 +1308,7 @@
         if (sme('prisotnost', 'r')) op.push(risiPrisotnost);
         if (sme('statistika', 'r')) op.push(function () { return risiUcinek(true); });
         if (sme('stranke', 'r')) op.push(risiStranke);
+        if (sme('reklamacije', 'r')) op.push(risiReklamacije);
         if (sme('artikli', 'r')) op.push(risiArtikli);
         if (JE_SUPER()) op.push(risiFakture);
         if (sme('uporabniki', 'r')) op.push(loadUsers);
@@ -1373,6 +1374,7 @@
   // Sorodni razdelki so en vnos v meniju z zavihki na vrhu razdelka (meni 15 → 11).
   var SKUPINE = {
     uporabniki: { ime: 'Uporabniki', clani: [['uporabniki', 'Uporabniki'], ['admin', 'Admin'], ['konzola', 'Konzola']] },
+    stranke: { ime: 'Stranke', clani: [['stranke', 'Stranke'], ['reklamacije', 'Reklamacije']] },
     statistika: { ime: 'Statistika', clani: [['statistika', 'Statistika'], ['gorivo', 'Gorivo']] },
     nastavitve: { ime: 'Nastavitve', clani: [['nastavitve', 'Splošno'], ['racun', 'Moj račun'], ['aplikacija', 'Aplikacije']] }
   };
@@ -1745,6 +1747,7 @@
     if (kam === 'arhiv') { if (LISTI_POLNI) { pokaziNalaganje($('arhivList')); LISTI_POLNI.then(function () { if (_secZdaj === 'arhiv') risiArhiv(); }); } else risiArhiv(); }
     if (kam === 'fakture') risiFakture();
     if (kam === 'stranke') risiStranke();
+    if (kam === 'reklamacije') risiReklamacije();
     if (kam === 'katalog') risiKatalog();
     if (kam === 'uporabniki') loadUsers();
     if (kam === 'nastavitve') { risiNastavitve(); napolniBio(); }
@@ -8661,6 +8664,241 @@
     } catch (e) {
       msg.textContent = napakaBesedilo(e);
     }
+  }
+
+  /* ══════════ REKLAMACIJE (5.08) — evidenca po strankah ══════════
+     Zavihek pod Strankami (SKUPINE.stranke). Kartica = naslovnica (stranka; barva = stanje: oranžna odprta, zelena rešena)
+     → datum → vrsta in kosi ›. Klik odpre okno s podrobnostmi, fotografijami in dejanji (Uredi, Rešeno / Odpri znova, Izbriši).
+     »Nova reklamacija« odpre obrazec v oknu. Fotografije: bucket »dokumenti«, reklamacije/<id>/… (pomanjšane na 1600 px).
+     Samo evidenca — nič se ne zaračuna (odločitev lastnika 2026-11-17). */
+  var REKL = null, REKL_URL = {}, REKL_ODPRTA = null;   // REKL_ODPRTA: kartica odprtega okna ostane, dokler je okno odprto (tudi če je filter ne bi več pokazal)
+  var REKL_VRSTE = [['izgubljen', 'Izgubljen kos'], ['poskodovan', 'Poškodovan kos'], ['neociscen', 'Neočiščeno ali madež'], ['napacna_dostava', 'Napačna dostava'], ['drugo', 'Drugo']];
+  function reklVrsta(v) { var x = REKL_VRSTE.filter(function (r) { return r[0] === v; })[0]; return x ? x[1] : v; }
+  function reklFilter() { try { return localStorage.getItem('sc-rekl-filter') || 'odprte'; } catch (e) { return 'odprte'; } }
+  function reklPoId(id) { return (REKL || []).filter(function (x) { return x.id === id; })[0] || null; }
+  function reklListSt(r) { var l = r && r.note_id && LISTI.filter(function (x) { return x.id === r.note_id; })[0]; return l ? l.number : ''; }
+  function reklKosi(r) { return r.kosov ? r.kosov + ' × ' + (r.artikel || 'kos') : (r.artikel || ''); }
+  async function naloziReklamacije() {
+    var r = await sb.from('reklamacije').select('id,org_id,note_id,datum,vrsta,artikel,kosov,opis,slike,stanje,resitev,resena_at,resil,avtor,created_at')
+      .is('deleted_at', null).order('datum', { ascending: false }).order('created_at', { ascending: false }).limit(2000);
+    if (r.error) throw r.error;
+    REKL = r.data || [];
+    return REKL;
+  }
+  async function risiReklamacije() {
+    var box = $('reklList'); if (!box) return;
+    if (!box.dataset.zgr) {
+      box.dataset.zgr = '1';
+      var nb = $('reklNovaBtn'); if (nb) nb.addEventListener('click', function () { reklObrazec(null); });
+      var i = $('reklIsci'); if (i) i.addEventListener('input', reklRisi);
+      var f = $('reklFilter'); if (f) { f.value = reklFilter(); f.addEventListener('change', function () { try { localStorage.setItem('sc-rekl-filter', f.value); } catch (e) {} reklRisi(); }); }
+    }
+    { var nb2 = $('reklNovaBtn'); if (nb2) nb2.classList.toggle('hidden', !sme('reklamacije', 'w')); }
+    pokaziNalaganje(box);
+    try { await naloziReklamacije(); }
+    catch (e) { if (!box.dataset.loaded) box.innerHTML = '<div class="rows"><div class="empty"><h3>Nalaganje ni uspelo</h3><p class="u-sub">' + escape_(napakaBesedilo(e)) + '</p></div></div>'; return; }
+    reklRisi();
+  }
+  function reklRisi() {
+    var box = $('reklList'); if (!box || !REKL) return;
+    var q = (($('reklIsci') || {}).value || '').trim().toLowerCase(), f = reklFilter();
+    var odprtih = REKL.filter(function (r) { return r.stanje === 'odprta'; }).length;
+    $('reklPod').textContent = odprtih ? stevilo(odprtih) + ' odprtih' : '';
+    var list = REKL.filter(function (r) {
+      if (r.id === REKL_ODPRTA) return true;
+      if (f === 'odprte' && r.stanje !== 'odprta') return false;
+      if (f === 'resene' && r.stanje !== 'resena') return false;
+      return !q || [ORGIME[r.org_id], reklVrsta(r.vrsta), r.artikel, r.opis, r.resitev, reklListSt(r), datum(r.datum)].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+    if (!list.length) {
+      box.innerHTML = '<div class="rows"><div class="empty"><h3>' + (!REKL.length ? 'Še ni reklamacij' : q ? 'Nič se ne ujema' : f === 'odprte' ? 'Ni odprtih reklamacij' : 'Ni reklamacij') + '</h3></div></div>';
+      box.dataset.loaded = '1'; oknoPoIzrisu(); return;
+    }
+    box.innerHTML = '<div class="rows rekl-kart">' + list.map(function (r) {
+      var nasl = reklVrsta(r.vrsta) + (reklKosi(r) ? ' · ' + reklKosi(r) : '');
+      return '<div class="lcell' + (r.stanje === 'resena' ? ' rekl-resena' : '') + '"><button class="row" type="button" data-rekl="' + escape_(r.id) + '" style="' + naslovnica(BARVE_STANJA[r.stanje === 'resena' ? 'green' : 'yellow'], r.id) + '" aria-haspopup="dialog">' +
+        '<span><span class="row-name"><span class="row-nm">' + escape_(ORGIME[r.org_id] || 'Stranka') + '</span></span><br><span class="row-legal">' + escape_(nasl) + '</span></span>' +
+        '<span class="num">' + escape_(datum(r.datum)) + '</span><span class="chev" aria-hidden="true">›</span></button></div>';
+    }).join('') + '</div>';
+    box.dataset.loaded = '1';
+    box.querySelectorAll('[data-rekl]').forEach(function (b) { b.addEventListener('click', function () { reklOdpri(b); }); });
+    oknoPoIzrisu();
+  }
+  function reklNajdi(id) { return document.querySelector('#reklList [data-rekl="' + String(id).replace(/"/g, '\\"') + '"]'); }
+  function reklGlava(id, naslov) {
+    return function () {
+      var d = document.createElement('div'), r = reklPoId(id);
+      if (!r) { d.innerHTML = '<h3 class="sec-h">' + escape_(naslov || 'Reklamacija') + '</h3>'; return d; }
+      d.innerHTML = '<h3 class="sec-h">' + escape_(ORGIME[r.org_id] || 'Reklamacija') + '</h3><div class="okno-glava-sub">' + escape_(datum(r.datum) + ' · ' + reklVrsta(r.vrsta) + (r.stanje === 'resena' ? ' · rešena' : '')) + '</div>';
+      return d;
+    };
+  }
+  function reklOdpri(btn) {
+    if (_okno) return;
+    var r = reklPoId(btn.dataset.rekl); if (!r) return;
+    var box = document.createElement('div'); box.className = 'rekl-okno';
+    reklRisiPodrobno(box, r.id);
+    REKL_ODPRTA = r.id;
+    oknoOdpri(btn, box, function () { return reklNajdi(r.id); }, { glava: reklGlava(r.id), obZaprtju: function () { REKL_ODPRTA = null; setTimeout(reklRisi, 0); } });
+  }
+  async function reklSlikeUrl(poti) {
+    var manjka = poti.filter(function (p) { return !REKL_URL[p]; });
+    if (manjka.length) {
+      try { var su = await sb.storage.from('dokumenti').createSignedUrls(manjka, 3600); (su.data || []).forEach(function (x) { if (x && x.signedUrl && x.path) REKL_URL[x.path] = x.signedUrl; }); } catch (e) {}
+    }
+    return poti.map(function (p) { return REKL_URL[p] || ''; });
+  }
+  function reklRisiPodrobno(box, id) {
+    var r = reklPoId(id); if (!r) return;
+    var w = sme('reklamacije', 'w'), st = reklListSt(r);
+    box.innerHTML = '<div class="rekl-det"><dl class="okno-dl">' +
+      '<dt>Vrsta</dt><dd>' + escape_(reklVrsta(r.vrsta)) + '</dd>' +
+      (reklKosi(r) ? '<dt>Kosi</dt><dd>' + escape_(reklKosi(r)) + '</dd>' : '') +
+      (st ? '<dt>Spremni list</dt><dd>' + escape_(st) + '</dd>' : '') +
+      (r.opis ? '<dt>Opis</dt><dd class="rekl-besedilo">' + escape_(r.opis) + '</dd>' : '') +
+      '<dt>Stanje</dt><dd>' + (r.stanje === 'resena' ? 'Rešena' + (r.resena_at ? ' ' + escape_(datum(isoLokalno(new Date(r.resena_at)))) : '') + (r.resil ? ' · ' + escape_(r.resil) : '') : 'Odprta') + '</dd>' +
+      (r.resitev ? '<dt>Rešitev</dt><dd class="rekl-besedilo">' + escape_(r.resitev) + '</dd>' : '') +
+      '<dt>Vpisal</dt><dd>' + escape_(r.avtor || '—') + '</dd></dl>' +
+      ((r.slike || []).length ? '<div class="rekl-slike">' + r.slike.map(function (p, i) { return '<button type="button" class="rekl-slika" data-slika="' + i + '" aria-label="Fotografija ' + (i + 1) + '"><img alt="" decoding="async"></button>'; }).join('') + '</div>' : '') +
+      (w ? '<div class="u-acts rekl-akc"><button type="button" data-rekl-uredi>Uredi</button>' +
+        (r.stanje === 'odprta' ? '<button type="button" class="ur-save" data-rekl-resi>Rešeno</button>' : '<button type="button" data-rekl-odpri>Odpri znova</button>') +
+        '<button type="button" class="rekl-brisi" data-rekl-brisi>Izbriši</button></div>' : '') + '</div>';
+    if ((r.slike || []).length) reklSlikeUrl(r.slike).then(function (urls) {
+      box.querySelectorAll('.rekl-slika').forEach(function (b, i) { var img = b.querySelector('img'); if (img && urls[i]) img.src = urls[i]; });
+    });
+    box.querySelectorAll('.rekl-slika').forEach(function (b) { b.addEventListener('click', async function () { var u = (await reklSlikeUrl([r.slike[+b.dataset.slika]]))[0]; if (u) window.open(u, '_blank', 'noopener'); else toast('Fotografije ni bilo mogoče odpreti.'); }); });
+    var g = function (s) { return box.querySelector(s); };
+    if (g('[data-rekl-uredi]')) g('[data-rekl-uredi]').addEventListener('click', function () { reklObrazec(r, box); });
+    if (g('[data-rekl-resi]')) g('[data-rekl-resi]').addEventListener('click', async function () {
+      var t = await vnesiModal({ naslov: 'Kako je bila rešena?', placeholder: 'npr. kos najden, dobropis, ponovno oprano', potrdi: 'Rešeno' });
+      if (t === null) return;
+      await reklShraniStanje(r, box, { stanje: 'resena', resitev: String(t).trim() || null, resena_at: new Date().toISOString(), resil: JAZIME || null }, 'Rešeno');
+    });
+    if (g('[data-rekl-odpri]')) g('[data-rekl-odpri]').addEventListener('click', function () { reklShraniStanje(r, box, { stanje: 'odprta', resena_at: null, resil: null }, 'Odprto znova'); });
+    if (g('[data-rekl-brisi]')) g('[data-rekl-brisi]').addEventListener('click', async function () {
+      var ok = await potrdiModal({ naslov: 'Izbriši reklamacijo?', sporocilo: (ORGIME[r.org_id] || '') + ' · ' + datum(r.datum) + ' · ' + reklVrsta(r.vrsta), potrdi: 'Izbriši', nevarno: true });
+      if (!ok) return;
+      var u = await sb.from('reklamacije').update({ deleted_at: new Date().toISOString() }).eq('id', r.id);
+      if (u.error) { toast(napakaBesedilo(u.error)); return; }
+      logDodaj('Reklamacije', 'Izbrisano', (ORGIME[r.org_id] || '') + ' · ' + datum(r.datum) + ' · ' + reklVrsta(r.vrsta));
+      REKL = REKL.filter(function (x) { return x.id !== r.id; });
+      if (_okno) oknoZapri();
+      reklRisi(); toast('Reklamacija izbrisana');
+    });
+  }
+  async function reklShraniStanje(r, box, sprememba, dnevnik) {
+    var u = await sb.from('reklamacije').update(sprememba).eq('id', r.id).select('id').single();
+    if (u.error) { toast(napakaBesedilo(u.error)); return; }
+    Object.assign(r, sprememba);
+    logDodaj('Reklamacije', dnevnik, (ORGIME[r.org_id] || '') + ' · ' + datum(r.datum) + ' · ' + reklVrsta(r.vrsta));
+    reklRisiPodrobno(box, r.id);
+    if (_okno && _okno.glavaFn) oknoGlava();   // kartice se izrišejo ob zaprtju okna (rešena izgine iz »Odprte« šele takrat)
+  }
+  // pomanjšana fotografija (daljša stranica največ 1600 px), JPEG
+  function reklSlikaBlob(file) {
+    return new Promise(function (ok, ne) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        try {
+          var k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+          c.toBlob(function (b) { b ? ok(b) : ne(new Error('slika')); }, 'image/jpeg', 0.82);
+        } catch (e) { ne(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); ne(new Error('Fotografije ni bilo mogoče prebrati.')); };
+      img.src = url;
+    });
+  }
+  // obrazec: r = null → nova (okno iz gumba »Nova reklamacija«), sicer urejanje v odprtem oknu (box)
+  async function reklObrazec(r, box) {
+    var nova = !r;
+    if (nova && _okno) return;
+    var gumb = $('reklNovaBtn');
+    if (nova) { if (gumb) gumb.classList.add('nalaga'); try { await naloziClane(); } catch (e) {} if (gumb) gumb.classList.remove('nalaga'); box = $('reklNovaBox'); }
+    var orgOpc = ORGSEZNAM.map(function (o) { return '<option value="' + escape_(o.id) + '"' + (r && r.org_id === o.id ? ' selected' : '') + '>' + escape_(o.name) + '</option>'; }).join('');
+    var vrstaOpc = REKL_VRSTE.map(function (v) { return '<option value="' + v[0] + '"' + (r && r.vrsta === v[0] ? ' selected' : '') + '>' + v[1] + '</option>'; }).join('');
+    var slike = (r && r.slike || []).slice(), nove = [];
+    box.innerHTML = '<div class="ur-form rekl-obr">' +
+      '<label class="ur-f"><span>Stranka</span><select data-org>' + (nova ? '<option value="">Izberi stranko</option>' : '') + orgOpc + '</select></label>' +
+      '<div class="ur-grid nl-2"><label class="ur-f"><span>Datum</span><input type="date" data-datum value="' + escape_(r ? r.datum : danes10()) + '"></label>' +
+      '<label class="ur-f"><span>Vrsta</span><select data-vrsta>' + vrstaOpc + '</select></label></div>' +
+      '<div class="ur-grid nl-2"><label class="ur-f"><span>Artikel</span><input type="text" data-artikel list="reklArtikli" autocomplete="off" value="' + escape_(r && r.artikel || '') + '"><datalist id="reklArtikli"></datalist></label>' +
+      '<label class="ur-f"><span>Kosov</span><input type="number" min="1" step="1" inputmode="numeric" data-kosov value="' + escape_(r && r.kosov ? String(r.kosov) : '') + '"></label></div>' +
+      '<label class="ur-f"><span>Spremni list</span><select data-list></select></label>' +
+      '<label class="ur-f"><span>Opis</span><textarea rows="3" data-opis>' + escape_(r && r.opis || '') + '</textarea></label>' +
+      '<div class="ur-f"><span>Fotografije</span><div class="rekl-slike rekl-slike-ur" data-slike></div><input type="file" accept="image/*" multiple hidden data-datoteke></div>' +
+      '<p class="u-sub ur-msg" data-msg role="status" aria-live="polite"></p>' +
+      '<div class="u-acts"><button type="button" data-preklici>Prekliči</button><button type="button" class="ur-save" data-shrani>' + (nova ? 'Ustvari' : 'Shrani') + '</button></div></div>';
+    var g = function (s) { return box.querySelector(s); };
+    function napolniOdvisno() {   // artikli in spremni listi izbrane stranke
+      var org = g('[data-org]').value;
+      g('#reklArtikli').innerHTML = (CLANI || []).filter(function (a) { return a.org_id === org && a.name; }).map(function (a) { return '<option value="' + escape_(a.name) + '"></option>'; }).join('');
+      var meja = isoLokalno(new Date(Date.now() - 120 * 864e5));
+      var listi = LISTI.filter(function (l) { return l.org_id === org && (l.doc_date >= meja || (r && l.id === r.note_id)); }).slice(0, 80);
+      g('[data-list]').innerHTML = '<option value="">—</option>' + listi.map(function (l) { return '<option value="' + escape_(l.id) + '"' + (r && r.note_id === l.id ? ' selected' : '') + '>' + escape_(l.number + ' · ' + datum(l.doc_date)) + '</option>'; }).join('');
+    }
+    function risiSlike() {
+      var h = g('[data-slike]');
+      h.innerHTML = slike.map(function (p, i) { return '<span class="rekl-slika"><img alt="" data-pot="' + escape_(p) + '"><button type="button" class="rekl-slika-x" data-x-star="' + i + '" aria-label="Odstrani fotografijo">' + IKO_ZAPRI + '</button></span>'; }).join('') +
+        nove.map(function (n, i) { return '<span class="rekl-slika"><img alt="" src="' + n.url + '"><button type="button" class="rekl-slika-x" data-x-nova="' + i + '" aria-label="Odstrani fotografijo">' + IKO_ZAPRI + '</button></span>'; }).join('') +
+        '<button type="button" class="rekl-slika rekl-slika-dodaj" data-dodaj aria-label="Dodaj fotografijo">' + IKO_T_PLUS + '</button>';
+      if (slike.length) reklSlikeUrl(slike).then(function (u) { h.querySelectorAll('img[data-pot]').forEach(function (img, i) { if (u[i]) img.src = u[i]; }); });
+    }
+    napolniOdvisno(); risiSlike();
+    g('[data-org]').addEventListener('change', napolniOdvisno);
+    box.addEventListener('click', function (e) {
+      if (e.target.closest('[data-dodaj]')) { g('[data-datoteke]').click(); return; }
+      var xs = e.target.closest('[data-x-star]'); if (xs) { slike.splice(+xs.dataset.xStar, 1); risiSlike(); return; }
+      var xn = e.target.closest('[data-x-nova]'); if (xn) { URL.revokeObjectURL(nove[+xn.dataset.xNova].url); nove.splice(+xn.dataset.xNova, 1); risiSlike(); return; }
+    });
+    g('[data-datoteke]').addEventListener('change', function () {
+      [].forEach.call(this.files || [], function (f) { if (/^image\//.test(f.type) || /\.(jpe?g|png|heic|webp)$/i.test(f.name)) nove.push({ f: f, url: URL.createObjectURL(f) }); });
+      this.value = ''; risiSlike();
+    });
+    g('[data-preklici]').addEventListener('click', function () { if (nova) oknoKoncaj(); else oknoKoncaj(function () { if (_okno) _okno.varuj = null; reklRisiPodrobno(box, r.id); }); });
+    g('[data-shrani]').addEventListener('click', async function () {
+      var btn = this, msg = g('[data-msg]'), org = g('[data-org]').value;
+      if (!org) { msg.textContent = 'Izberi stranko.'; return; }
+      var kos = parseInt(g('[data-kosov]').value, 10);
+      var zapis = { org_id: org, datum: g('[data-datum]').value || danes10(), vrsta: g('[data-vrsta]').value, artikel: g('[data-artikel]').value.trim() || null,
+        kosov: kos > 0 ? kos : null, note_id: g('[data-list]').value || null, opis: g('[data-opis]').value.trim() || null };
+      btn.disabled = true; btn.classList.add('nalaga'); msg.textContent = '';
+      try {
+        var id = r && r.id;
+        if (nova) {
+          zapis.avtor = JAZIME || null; zapis.stanje = 'odprta';
+          var ins = await sb.from('reklamacije').insert(zapis).select('id').single(); if (ins.error) throw ins.error; id = ins.data.id;
+        }
+        var nalozene = [];
+        for (var i = 0; i < nove.length; i++) {
+          msg.textContent = 'Nalagam fotografije … ' + (i + 1) + ' / ' + nove.length;
+          var blob = await reklSlikaBlob(nove[i].f), pot = 'reklamacije/' + id + '/' + Date.now().toString(36) + '-' + i + '.jpg';
+          var up = await sb.storage.from('dokumenti').upload(pot, blob, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false });
+          if (up.error) throw up.error;
+          nalozene.push(pot);
+        }
+        zapis.slike = slike.concat(nalozene);
+        var upd = await sb.from('reklamacije').update(nova ? { slike: zapis.slike } : zapis).eq('id', id); if (upd.error) throw upd.error;
+        var odstranjene = (r && r.slike || []).filter(function (p) { return slike.indexOf(p) < 0; });
+        if (odstranjene.length) { try { await sb.storage.from('dokumenti').remove(odstranjene); } catch (e2) {} }
+        logDodaj('Reklamacije', nova ? 'Dodano' : 'Urejeno', (ORGIME[org] || '') + ' · ' + datum(zapis.datum) + ' · ' + reklVrsta(zapis.vrsta));
+        nove.forEach(function (n) { URL.revokeObjectURL(n.url); });
+        await naloziReklamacije();
+        if (_okno) _okno.varuj = null;
+        if (nova) { if (_okno) oknoZapri(); toast('Reklamacija vpisana'); }
+        else reklRisiPodrobno(box, id);
+        reklRisi();
+      } catch (e) { msg.textContent = napakaBesedilo(e); btn.disabled = false; btn.classList.remove('nalaga'); }
+    });
+    if (nova) {
+      oknoOdpri(gumb, box, function () { return $('reklNovaBtn'); }, {
+        glava: function () { var h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = 'Nova reklamacija'; return h; },
+        varuj: 'Shranim reklamacijo?', obZaprtju: function () { box.innerHTML = ''; }
+      });
+    } else if (_okno) { _okno.varuj = 'Shranim spremembe?'; }
+    oknoZapomni(box);
+    if (nova) setTimeout(function () { var s = g('[data-org]'); if (s) s.focus(); }, 380);
   }
 
   /* ══════════ KATALOG (stranka) ══════════ */

@@ -3447,6 +3447,29 @@ html.v5:not(.sc-sam) .auth::after{bottom:0;}
 .v5 .rf-kos-pr{font-size:var(--fs-13);color:var(--mid);white-space:nowrap;font-variant-numeric:tabular-nums;}
 .v5 .rf-kos-modal{max-width:460px;}
 
+/* ══════════ REKLAMACIJE (5.08) — evidenca; okno: podrobnosti, fotografije, dejanja; obrazec v istem oknu ══════════ */
+.okno .rekl-okno{padding:20px 24px 24px;}
+@media(max-width:560px){ .okno .rekl-okno{padding:14px 16px 18px;} }
+.v5 .rekl-det{display:flex;flex-direction:column;gap:18px;}
+.v5 .rekl-det .okno-dl{margin:0;}
+.v5 .rekl-besedilo{white-space:pre-wrap;}
+.v5 .rekl-slike{display:flex;flex-wrap:wrap;gap:8px;}
+.v5 .rekl-slika{position:relative;display:block;width:92px;height:92px;margin:0;padding:0;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface);cursor:pointer;}
+.v5 .rekl-slika img{display:block;width:100%;height:100%;object-fit:cover;}
+.v5 .rekl-slika-dodaj{display:flex;align-items:center;justify-content:center;border-style:dashed;color:var(--mid);font:inherit;}
+.v5 .rekl-slika-dodaj svg{width:20px;height:20px;}
+@media(hover:hover){ .v5 .rekl-slika-dodaj:hover{color:var(--ink);border-color:var(--line-strong);} }
+.v5 .rekl-slika-x{position:absolute;top:5px;right:5px;display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:0;border-radius:50%;
+  background:color-mix(in srgb,var(--bg) 72%,transparent);color:var(--ink);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);cursor:pointer;}
+.v5 .rekl-slika-x svg{width:12px;height:12px;}
+.v5 .rekl-akc{flex-wrap:wrap;}
+/* opis: enako polje kot ostala v obrazcih (pisava portala, rob, zaobljenost, ozadje) */
+.v5 .rekl-obr textarea{display:block;width:100%;min-height:92px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);
+  font-family:var(--sans);font-size:var(--fs-15);line-height:1.45;resize:vertical;box-sizing:border-box;}
+@media(max-width:720px){ .v5 .rekl-obr textarea{font-size:var(--fs-16);} }   /* iPhone ne poveča strani ob fokusu */
+.v5[data-view="grid"] .rekl-kart .lcell:not(.open) .row .num{grid-column:1 / -1;}
+.v5 .rekl-akc .rekl-brisi{color:var(--st-bad-ink)!important;}
+
 /* ══════════ PERILO (5.05, prej Čipi) ══════════
    Kartice strank: naslovnica → število kosov → pogrešani (opozorilna barva) / »Brez pogrešanih« ›.
    Okno stranke: trak »kje je perilo« (pri stranki · v pralnici · pogrešani, deli v razmerju, 2 px razmika),
