@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.10 · BETA';
+  var APP_VERZIJA = '5.11 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -894,7 +894,7 @@
   // Razdelki, katerih vidnost/pravice je mogoče nastavljati po vlogah.
   var ADMIN_RAZDELKI = [
     ['domov', 'Domov'], ['dokumenti', 'Dokumenti'], ['prisotnost', 'Prisotnost'], ['stranke', 'Stranke'], ['reklamacije', 'Reklamacije'],
-    ['arhiv', 'Spremni listi'], ['cipi', 'Perilo'], ['artikli', 'Cenik & artikli'], ['fakture', 'Fakture'], ['uporabniki', 'Uporabniki'],
+    ['arhiv', 'Spremni listi'], ['dostave', 'Dostave'], ['cipi', 'Perilo'], ['artikli', 'Cenik & artikli'], ['fakture', 'Fakture'], ['uporabniki', 'Uporabniki'],
     ['statistika', 'Statistika'], ['gorivo', 'Gorivo'], ['konzola', 'Konzola'], ['aplikacija', 'Aplikacije'], ['katalog', 'Katalog']
   ];
   var ADMIN_VLOGE = ['super', 'admin', 'osebje', 'zaposleni', 'stranka'];
@@ -902,11 +902,11 @@
   // Privzete vidne pravice (r,w,x,d) — ujemajo se z obstajajočim obnašanjem.
   function _perm(r, w, x, d) { return { r: !!r, w: !!w, x: !!x, d: !!d }; }
   var ADMIN_PRIVZ = {
-    super: { reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(1, 1, 1, 1), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(1, 1, 1, 1), uporabniki: _perm(1, 1, 1, 1) },
-    admin: { reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(1, 1, 1, 1), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(1, 1, 1, 1), uporabniki: _perm(1, 1, 1, 1) },
-    osebje: { reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) },
-    zaposleni: { reklamacije: _perm(0, 0, 0, 0), cipi: _perm(0, 0, 0, 0), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 0, 0, 0), prisotnost: _perm(1, 0, 0, 1), arhiv: _perm(0, 0, 0, 0), katalog: _perm(0, 0, 0, 0), statistika: _perm(0, 0, 0, 0), artikli: _perm(0, 0, 0, 0), stranke: _perm(0, 0, 0, 0), dokumenti: _perm(0, 0, 0, 0), aplikacija: _perm(0, 0, 0, 0), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) },
-    stranka: { reklamacije: _perm(0, 0, 0, 0), cipi: _perm(0, 0, 0, 0), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 0, 0, 0), prisotnost: _perm(0, 0, 0, 0), arhiv: _perm(1, 0, 0, 1), katalog: _perm(1, 0, 0, 0), statistika: _perm(0, 0, 0, 0), artikli: _perm(0, 0, 0, 0), stranke: _perm(0, 0, 0, 0), dokumenti: _perm(0, 0, 0, 0), aplikacija: _perm(0, 0, 0, 0), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) }
+    super: { dostave: _perm(1, 1, 1, 1), reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(1, 1, 1, 1), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(1, 1, 1, 1), uporabniki: _perm(1, 1, 1, 1) },
+    admin: { dostave: _perm(1, 1, 1, 1), reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(1, 1, 1, 1), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(1, 1, 1, 1), uporabniki: _perm(1, 1, 1, 1) },
+    osebje: { dostave: _perm(1, 1, 1, 1), reklamacije: _perm(1, 1, 1, 1), cipi: _perm(1, 1, 1, 1), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 1, 1, 1), prisotnost: _perm(1, 1, 1, 1), arhiv: _perm(1, 1, 1, 1), katalog: _perm(0, 0, 0, 0), statistika: _perm(1, 1, 1, 1), artikli: _perm(1, 1, 1, 1), stranke: _perm(1, 1, 1, 1), dokumenti: _perm(1, 1, 1, 1), aplikacija: _perm(1, 1, 1, 1), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) },
+    zaposleni: { dostave: _perm(0, 0, 0, 0), reklamacije: _perm(0, 0, 0, 0), cipi: _perm(0, 0, 0, 0), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 0, 0, 0), prisotnost: _perm(1, 0, 0, 1), arhiv: _perm(0, 0, 0, 0), katalog: _perm(0, 0, 0, 0), statistika: _perm(0, 0, 0, 0), artikli: _perm(0, 0, 0, 0), stranke: _perm(0, 0, 0, 0), dokumenti: _perm(0, 0, 0, 0), aplikacija: _perm(0, 0, 0, 0), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) },
+    stranka: { dostave: _perm(0, 0, 0, 0), reklamacije: _perm(0, 0, 0, 0), cipi: _perm(0, 0, 0, 0), gorivo: _perm(0, 0, 0, 0), domov: _perm(1, 0, 0, 0), prisotnost: _perm(0, 0, 0, 0), arhiv: _perm(1, 0, 0, 1), katalog: _perm(1, 0, 0, 0), statistika: _perm(0, 0, 0, 0), artikli: _perm(0, 0, 0, 0), stranke: _perm(0, 0, 0, 0), dokumenti: _perm(0, 0, 0, 0), aplikacija: _perm(0, 0, 0, 0), fakture: _perm(0, 0, 0, 0), uporabniki: _perm(0, 0, 0, 0) }
   };
   var ROLE_CFG = null;  // { imena:{...}, perm:{ vloga:{ razdelek:{r,w,x,d} } } }
   function roleIme(v) { return (ROLE_CFG && ROLE_CFG.imena && ROLE_CFG.imena[v]) || ADMIN_IMENA_PRIVZ[v] || v; }
@@ -1374,6 +1374,7 @@
   // Sorodni razdelki so en vnos v meniju z zavihki na vrhu razdelka (meni 15 → 11).
   var SKUPINE = {
     uporabniki: { ime: 'Uporabniki', clani: [['uporabniki', 'Uporabniki'], ['admin', 'Admin'], ['konzola', 'Konzola']] },
+    arhiv: { ime: 'Spremni listi', clani: [['arhiv', 'Spremni listi'], ['dostave', 'Dostave']] },
     stranke: { ime: 'Stranke', clani: [['stranke', 'Stranke'], ['reklamacije', 'Reklamacije']] },
     statistika: { ime: 'Statistika', clani: [['statistika', 'Statistika'], ['gorivo', 'Gorivo']] },
     nastavitve: { ime: 'Nastavitve', clani: [['nastavitve', 'Splošno'], ['racun', 'Moj račun'], ['aplikacija', 'Aplikacije']] }
@@ -1748,6 +1749,7 @@
     if (kam === 'fakture') risiFakture();
     if (kam === 'stranke') risiStranke();
     if (kam === 'reklamacije') risiReklamacije();
+    if (kam === 'dostave') risiDostave();
     if (kam === 'katalog') risiKatalog();
     if (kam === 'uporabniki') loadUsers();
     if (kam === 'nastavitve') { risiNastavitve(); napolniBio(); }
@@ -8808,6 +8810,208 @@
     } catch (e) {
       msg.textContent = napakaBesedilo(e);
     }
+  }
+
+  /* ══════════ NAČRT DOSTAV (5.11) — Spremni listi → Dostave ══════════
+     Urnik: za vsako stranko dnevi dostave (1 = ponedeljek … 7 = nedelja), vrstni red na poti in opomba za voznika.
+     Dan: postaje izbranega dne po vrstnem redu (kartice; barva = stanje: zelena opravljeno, oranžna izredna, siva čaka).
+     Klik odpre okno: naslov z zemljevidom, opomba, spremni listi stranke za ta dan, Opravljeno (kdaj, kdo).
+     »Dostava« doda izredno postajo samo za ta dan. */
+  var DOST = { dan: null, urnik: null, zapisi: null, gen: 0 };
+  var DOST_DNEVI = [[1, 'Po'], [2, 'To'], [3, 'Sr'], [4, 'Če'], [5, 'Pe'], [6, 'So'], [7, 'Ne']];
+  function dostDanTedna(iso) { return new Date(iso + 'T00:00:00').getDay() || 7; }
+  async function dostNalozi() {
+    var dan = DOST.dan, g = ++DOST.gen;
+    var r = await Promise.all([
+      DOST.urnik ? Promise.resolve(null) : sb.from('dostave_urnik').select('org_id,dnevi,vrstni_red,opomba'),
+      sb.from('dostave').select('id,datum,org_id,izredna,opravljeno_at,opravil,opomba').eq('datum', dan).is('deleted_at', null)
+    ]);
+    if (r[0] && r[0].error) throw r[0].error;
+    if (r[1].error) throw r[1].error;
+    if (g !== DOST.gen) return false;
+    if (r[0]) { var m = {}; (r[0].data || []).forEach(function (x) { m[x.org_id] = x; }); DOST.urnik = m; }
+    DOST.zapisi = r[1].data || [];
+    return true;
+  }
+  // postaje dne: stranke po urniku + izredne (zapis za ta dan); po vrstnem redu na poti, izredne na koncu
+  function dostPostaje() {
+    var wd = dostDanTedna(DOST.dan), po = {}, U = DOST.urnik || {};
+    ORGSEZNAM.forEach(function (o) { var u = U[o.id]; if (u && (u.dnevi || []).indexOf(wd) >= 0 && !ORGNEAKT[o.id]) po[o.id] = { org: o, urnik: u, zapis: null }; });
+    (DOST.zapisi || []).forEach(function (z) {
+      var o = ORGSEZNAM.filter(function (x) { return x.id === z.org_id; })[0]; if (!o) return;
+      (po[z.org_id] || (po[z.org_id] = { org: o, urnik: U[z.org_id] || null, zapis: null })).zapis = z;
+    });
+    return Object.keys(po).map(function (k) { return po[k]; }).sort(function (a, b) {
+      var ia = a.zapis && a.zapis.izredna && !(a.urnik && (a.urnik.dnevi || []).indexOf(wd) >= 0), ib = b.zapis && b.zapis.izredna && !(b.urnik && (b.urnik.dnevi || []).indexOf(wd) >= 0);
+      if (ia !== ib) return ia ? 1 : -1;
+      var ra = a.urnik && a.urnik.vrstni_red != null ? a.urnik.vrstni_red : 1e6, rb = b.urnik && b.urnik.vrstni_red != null ? b.urnik.vrstni_red : 1e6;
+      return ra - rb || a.org.name.localeCompare(b.org.name, 'sl', { sensitivity: 'base' });
+    });
+  }
+  function dostListi(org) { return LISTI.filter(function (l) { return l.org_id === org && l.doc_date === DOST.dan; }); }
+  async function risiDostave() {
+    var box = $('dostList'); if (!box) return;
+    if (!DOST.dan) DOST.dan = danes10();
+    if (!box.dataset.zgr) {
+      box.dataset.zgr = '1';
+      var nb = $('dostNovaBtn'); if (nb) nb.addEventListener('click', dostIzredna);
+    }
+    { var nb2 = $('dostNovaBtn'); if (nb2) nb2.classList.toggle('hidden', !sme('dostave', 'w')); }
+    dostRisi(true);
+    try { if (await dostNalozi()) dostRisi(); }
+    catch (e) { var t = box.querySelector('.dost-telo'); if (t && !box.dataset.loaded) t.innerHTML = '<div class="rows"><div class="empty"><h3>Nalaganje ni uspelo</h3><p class="u-sub">' + escape_(napakaBesedilo(e)) + '</p></div></div>'; }
+  }
+  function dostRisi(nalaga) {
+    var box = $('dostList'); if (!box) return;
+    var danes = DOST.dan === danes10();
+    var glava = '<div class="pris-barvrsta dost-glava"><div class="pris-datum">' +
+      '<button type="button" class="pris-nav" data-dnav="-1" aria-label="Prejšnji dan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+      '<input type="date" id="dostDan" value="' + escape_(DOST.dan) + '" aria-label="Dan">' +
+      '<button type="button" class="pris-nav" data-dnav="1" aria-label="Naslednji dan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>' +
+      (danes ? '' : '<button type="button" class="dat-danes" data-ddanes>Danes</button>') + '</div></div>';
+    var telo;
+    if (nalaga && (DOST.zapisi === null || DOST.urnik === null)) telo = NALAGANJE;
+    else {
+      var ps = dostPostaje(), opr = ps.filter(function (p) { return p.zapis && p.zapis.opravljeno_at; }).length;
+      $('dostPod').textContent = ps.length ? opr + ' / ' + ps.length + ' opravljenih' : '';
+      if (!ps.length) telo = '<div class="rows"><div class="empty"><h3>' + (Object.keys(DOST.urnik || {}).length ? 'Ta dan ni dostav' : 'Urnik dostav še ni nastavljen') + '</h3>' +
+        (!Object.keys(DOST.urnik || {}).length && sme('dostave', 'w') ? '<button type="button" class="btn ghost" data-durnik style="margin-top:14px">Nastavi urnik</button>' : '') + '</div></div>';
+      else telo = '<div class="rows dost-postaje">' + ps.map(function (p, i) {
+        var z = p.zapis, opravljeno = !!(z && z.opravljeno_at), izredna = !!(z && z.izredna);
+        var barva = opravljeno ? BARVE_STANJA.green : izredna ? BARVE_STANJA.yellow : null;
+        var n = dostListi(p.org.id).length;
+        var stanje = opravljeno ? 'opravljeno ' + uraMin(z.opravljeno_at) : (izredna ? 'izredna' : 'čaka') + (n ? ' · ' + sklonListov(n) : '');
+        var pod = p.org.address || (p.urnik && p.urnik.opomba) || lepNaziv(p.org.legal_name || p.org.name);
+        return '<div class="lcell' + (opravljeno ? ' dost-opr' : '') + '"><button class="row" type="button" data-dost="' + escape_(p.org.id) + '" style="' + naslovnica(barva, p.org.id) + '" aria-haspopup="dialog">' +
+          '<span><span class="row-name"><span class="row-nm">' + escape_(p.org.name) + '</span></span><br><span class="row-legal">' + escape_(pod) + '</span></span>' +
+          '<span class="num">' + escape_(stanje) + '</span><span class="chev" aria-hidden="true">›</span></button></div>';
+      }).join('') + '</div>';
+      box.dataset.loaded = '1';
+    }
+    var imaUrnik = Object.keys(DOST.urnik || {}).length;
+    box.innerHTML = glava + '<div class="dost-telo">' + telo + '</div>' +
+      (imaUrnik && sme('dostave', 'w') ? '<p class="dost-urnik-p"><button type="button" class="link-btn" data-durnik>Urnik dostav</button></p>' : '');   // redko dejanje: povezava pod seznamom
+    box.querySelectorAll('[data-dnav]').forEach(function (b) { b.addEventListener('click', function () { var d = new Date(DOST.dan + 'T00:00:00'); d.setDate(d.getDate() + parseInt(b.dataset.dnav, 10)); dostNaDan(isoLokalno(d)); }); });
+    var di = $('dostDan'); if (di) di.addEventListener('change', function () { if (this.value) dostNaDan(this.value); });
+    var dd = box.querySelector('[data-ddanes]'); if (dd) dd.addEventListener('click', function () { dostNaDan(danes10()); });
+    box.querySelectorAll('[data-durnik]').forEach(function (b) { b.addEventListener('click', function () { dostUrnik(b); }); });
+    box.querySelectorAll('[data-dost]').forEach(function (b) { b.addEventListener('click', function () { dostOdpri(b); }); });
+    oknoPoIzrisu();
+  }
+  async function dostNaDan(dan) {
+    DOST.dan = dan; DOST.zapisi = null; dostRisi(true);
+    try { if (await dostNalozi()) dostRisi(); } catch (e) { toast(napakaBesedilo(e)); }
+  }
+  function dostPostaja(org) { return dostPostaje().filter(function (p) { return p.org.id === org; })[0] || null; }
+  function dostNajdi(org) { return document.querySelector('#dostList [data-dost="' + String(org).replace(/"/g, '\\"') + '"]'); }
+  function dostOdpri(btn) {
+    if (_okno) return;
+    var org = btn.dataset.dost, box = document.createElement('div'); box.className = 'dost-okno';
+    dostRisiOkno(box, org);
+    oknoOdpri(btn, box, function () { return dostNajdi(org); }, {
+      glava: function () { var p = dostPostaja(org), d = document.createElement('div'); d.innerHTML = '<h3 class="sec-h">' + escape_(p ? p.org.name : '') + '</h3><div class="okno-glava-sub">' + escape_(datum(DOST.dan)) + '</div>'; return d; }
+    });
+  }
+  function dostRisiOkno(box, org) {
+    var p = dostPostaja(org); if (!p) return;
+    var z = p.zapis, w = sme('dostave', 'w'), listi = dostListi(org), opr = !!(z && z.opravljeno_at), naslov = p.org.address || '';
+    box.innerHTML = '<div class="dost-det"><dl class="okno-dl">' +
+      (naslov ? '<dt>Naslov</dt><dd>' + escape_(naslov) + '</dd>' : '') +
+      (p.urnik && p.urnik.opomba ? '<dt>Opomba</dt><dd class="rekl-besedilo">' + escape_(p.urnik.opomba) + '</dd>' : '') +
+      '<dt>Spremni listi</dt><dd>' + (listi.length ? escape_(listi.map(function (l) { return l.number + ' · ' + sklonKosov(l.total_pieces || 0); }).join(', ')) : '<span class="u-sub">za ta dan ni lista</span>') + '</dd>' +
+      '<dt>Stanje</dt><dd>' + (opr ? 'Opravljeno ob ' + escape_(uraMin(z.opravljeno_at)) + (z.opravil ? ' · ' + escape_(z.opravil) : '') : (z && z.izredna ? 'Izredna · čaka' : 'Čaka')) + '</dd></dl>' +
+      '<div class="u-acts dost-akc">' +
+        (naslov ? '<a class="dost-zemljevid" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(naslov) + '" target="_blank" rel="noopener">Zemljevid</a>' : '') +
+        (w && z && z.izredna && !opr ? '<button type="button" data-dodstrani>Odstrani</button>' : '') +
+        (w ? (opr ? '<button type="button" data-dopr="0">Ni opravljeno</button>' : '<button type="button" class="ur-save" data-dopr="1">Opravljeno</button>') : '') +
+      '</div></div>';
+    var b = box.querySelector('[data-dopr]');
+    if (b) b.addEventListener('click', async function () {
+      b.disabled = true; b.classList.add('nalaga');
+      var vkl = b.dataset.dopr === '1', zap = { opravljeno_at: vkl ? new Date().toISOString() : null, opravil: vkl ? (JAZIME || null) : null };
+      var r = z ? await sb.from('dostave').update(zap).eq('id', z.id) : await sb.from('dostave').insert(Object.assign({ datum: DOST.dan, org_id: org, izredna: false }, zap)).select('id').single();
+      if (r.error) { toast(napakaBesedilo(r.error)); b.disabled = false; b.classList.remove('nalaga'); return; }
+      logDodaj('Dostave', vkl ? 'Opravljeno' : 'Ni opravljeno', p.org.name + ' · ' + datum(DOST.dan));
+      try { await dostNalozi(); } catch (e) {}
+      dostRisiOkno(box, org); dostRisi(); if (_okno) oknoGlava();
+    });
+    var o = box.querySelector('[data-dodstrani]');
+    if (o) o.addEventListener('click', async function () {
+      var r = await sb.from('dostave').update({ deleted_at: new Date().toISOString() }).eq('id', z.id);
+      if (r.error) { toast(napakaBesedilo(r.error)); return; }
+      logDodaj('Dostave', 'Izredna odstranjena', p.org.name + ' · ' + datum(DOST.dan));
+      if (_okno) oknoZapri();
+      try { await dostNalozi(); } catch (e) {}
+      dostRisi();
+    });
+  }
+  // izredna dostava: stranka samo za izbrani dan
+  async function dostIzredna() {
+    var v = {}; dostPostaje().forEach(function (p) { v[p.org.id] = 1; });
+    var opc = ORGSEZNAM.filter(function (o) { return !v[o.id] && !ORGNEAKT[o.id]; }).map(function (o) { return '<option value="' + escape_(o.id) + '">' + escape_(o.name) + '</option>'; }).join('');
+    var back = document.createElement('div'); back.className = 'sc-modal-back';
+    back.innerHTML = '<div class="sc-modal" role="dialog" aria-modal="true"><h4>Izredna dostava · ' + escape_(datum(DOST.dan)) + '</h4><div class="ur-form">' +
+      '<label class="ur-f"><span>Stranka</span><select data-org><option value="">Izberi stranko</option>' + opc + '</select></label>' +
+      '<label class="ur-f"><span>Opomba</span><input type="text" data-opomba maxlength="200"></label><p class="u-sub ur-msg" data-msg></p></div>' +
+      '<div class="sc-modal-acts"><button type="button" class="sc-modal-btn ghost" data-no>Prekliči</button><button type="button" class="sc-modal-btn primary" data-yes>Dodaj</button></div></div>';
+    document.body.appendChild(back); _modalA11y(back); requestAnimationFrame(function () { back.classList.add('show'); });
+    var done = false;
+    function zapri() { if (done) return; done = true; back.classList.remove('show'); document.removeEventListener('keydown', onk, true); setTimeout(function () { back.remove(); }, 180); _modalVrniFokus(); }
+    function onk(e) { if (e.key === 'Escape') { e.stopPropagation(); zapri(); } }
+    document.addEventListener('keydown', onk, true);
+    back.addEventListener('click', function (e) { if (e.target === back) zapri(); });
+    back.querySelector('[data-no]').addEventListener('click', zapri);
+    back.querySelector('[data-yes]').addEventListener('click', async function () {
+      var org = back.querySelector('[data-org]').value, msg = back.querySelector('[data-msg]');
+      if (!org) { msg.textContent = 'Izberi stranko.'; return; }
+      var r = await sb.from('dostave').insert({ datum: DOST.dan, org_id: org, izredna: true, opomba: back.querySelector('[data-opomba]').value.trim() || null }).select('id').single();
+      if (r.error) { msg.textContent = napakaBesedilo(r.error); return; }
+      logDodaj('Dostave', 'Izredna dodana', (ORGIME[org] || '') + ' · ' + datum(DOST.dan));
+      zapri();
+      try { await dostNalozi(); } catch (e) {}
+      dostRisi();
+    });
+  }
+  // urnik: vse stranke, dnevi (preklopi), vrstni red in opomba; vsaka sprememba se shrani takoj
+  function dostUrnik(gumb) {
+    if (_okno) return;
+    var w = sme('dostave', 'w'), U = DOST.urnik || {};
+    var box = document.createElement('div'); box.className = 'dost-urnik';
+    var vrstice = ORGSEZNAM.filter(function (o) { return !ORGNEAKT[o.id]; }).slice().sort(function (a, b) {
+      var ra = U[a.id] && U[a.id].vrstni_red != null ? U[a.id].vrstni_red : 1e6, rb = U[b.id] && U[b.id].vrstni_red != null ? U[b.id].vrstni_red : 1e6;
+      return ra - rb || a.name.localeCompare(b.name, 'sl', { sensitivity: 'base' });
+    });
+    box.innerHTML = '<input type="search" class="dost-isci" placeholder="Iskanje strank …" aria-label="Iskanje strank">' +
+      '<div class="dost-ur-sez">' + vrstice.map(function (o) {
+        var u = U[o.id] || {}, dn = u.dnevi || [];
+        return '<div class="dost-ur-v" data-org="' + escape_(o.id) + '" data-ime="' + escape_((o.name + ' ' + (o.legal_name || '')).toLowerCase()) + '">' +
+          '<span class="dost-ur-ime">' + escape_(o.name) + '</span>' +
+          '<span class="dost-ur-dni" role="group" aria-label="Dnevi dostave">' + DOST_DNEVI.map(function (d) { var on = dn.indexOf(d[0]) >= 0; return '<button type="button" class="dost-dan' + (on ? ' on' : '') + '" data-dan="' + d[0] + '" aria-pressed="' + on + '"' + (w ? '' : ' disabled') + '>' + d[1] + '</button>'; }).join('') + '</span>' +
+          '<input type="number" class="dost-ur-red" min="1" step="1" inputmode="numeric" placeholder="#" aria-label="Vrstni red na poti" value="' + (u.vrstni_red != null ? u.vrstni_red : '') + '"' + (w ? '' : ' disabled') + '>' +
+          '<input type="text" class="dost-ur-opo" maxlength="200" placeholder="Opomba za voznika" aria-label="Opomba za voznika" value="' + escape_(u.opomba || '') + '"' + (w ? '' : ' disabled') + '></div>';
+      }).join('') + '</div>';
+    box.querySelector('.dost-isci').addEventListener('input', function () { var q = this.value.trim().toLowerCase(); box.querySelectorAll('.dost-ur-v').forEach(function (v) { v.hidden = !!q && v.dataset.ime.indexOf(q) < 0; }); });
+    async function shrani(v) {
+      var org = v.dataset.org, dnevi = [].map.call(v.querySelectorAll('.dost-dan.on'), function (b) { return +b.dataset.dan; });
+      var red = parseInt(v.querySelector('.dost-ur-red').value, 10), opo = v.querySelector('.dost-ur-opo').value.trim();
+      var zap = { org_id: org, dnevi: dnevi, vrstni_red: red > 0 ? red : null, opomba: opo || null, updated_at: new Date().toISOString() };
+      v.classList.add('shranjujem');
+      var r = await sb.from('dostave_urnik').upsert(zap, { onConflict: 'org_id' });
+      v.classList.remove('shranjujem');
+      if (r.error) { toast(napakaBesedilo(r.error)); return; }
+      (DOST.urnik || (DOST.urnik = {}))[org] = zap;
+      v.classList.add('shranjeno'); setTimeout(function () { v.classList.remove('shranjeno'); }, 900);
+      dostRisi();
+    }
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('.dost-dan'); if (!b || b.disabled) return;
+      var on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+      shrani(b.closest('.dost-ur-v'));
+    });
+    box.addEventListener('change', function (e) { if (e.target.matches('.dost-ur-red, .dost-ur-opo')) shrani(e.target.closest('.dost-ur-v')); });
+    oknoOdpri(gumb, box, function () { return document.querySelector('#dostList [data-durnik]'); }, {
+      glava: function () { var h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = 'Urnik dostav'; return h; }
+    });
   }
 
   /* ══════════ REKLAMACIJE (5.08) — evidenca po strankah ══════════

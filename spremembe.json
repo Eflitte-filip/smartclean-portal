@@ -1,5 +1,15 @@
 [
  {
+  "v": "5.11",
+  "d": "2026-11-17",
+  "c": "2026-11-17T15:50:44+01:00",
+  "t": [
+   "Nov zavihek Spremni listi → Dostave: postaje izbranega dne po vrstnem redu na poti. Kartica je zelena, ko je dostava opravljena, in oranžna, ko je izredna. Na kartici je naslov in stanje.",
+   "Okno postaje pokaže naslov s povezavo na zemljevid, opombo za voznika in spremne liste stranke za ta dan. Gumb »Opravljeno« zabeleži čas in kdo.",
+   "»Dostava« doda izredno postajo samo za izbrani dan. Pod seznamom je »Urnik dostav« za dneve dostave po strankah (Po–Ne), vrstni red na poti in opombo, vse se shrani takoj."
+  ]
+ },
+ {
   "v": "5.10",
   "d": "2026-11-17",
   "c": "2026-11-17T15:38:53+01:00",
