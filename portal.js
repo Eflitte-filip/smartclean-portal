@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.05 · BETA';
+  var APP_VERZIJA = '5.06 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -2611,14 +2611,14 @@
           '<button type="button" class="cgrp-btn ghost" data-aktiv="' + z.id + '" data-v="' + (z.active ? '0' : '1') + '">' + (z.active ? 'Deaktiviraj' : 'Aktiviraj') + '</button>' +
           '<button type="button" class="cgrp-btn danger" data-izbrisi="' + z.id + '">Izbriši</button>' +
         '</div>';
-      // Mreža: naslovnica z imenom (barva osebe) → ure danes → stanje
+      // Mreža: naslovnica z imenom (barva osebe), stanje je na njej pod imenom (prisoten močneje, odsoten zbledelo); opravljene ure danes le, če so
       var barva = zapBarve[z.id];
       if (zapMreza) {
         var stanje = !z.active ? 'Neaktiven' : brezOdhoda ? 'Ni odhoda · ' + odhodTxt.replace(/^ni odhoda · /, '') : notri ? 'Prisoten od ' + uraMin(l.ts) : 'Odsoten';
-        var danesTxt = 'danes ' + (danUre || (notri && !brezOdhoda ? 'v teku' : 'ni vpisov'));
+        var ureTxt = (danUre && !brezOdhoda && z.active) ? 'danes ' + danUre : '';   // opravljene ure danes: svoja vrstica na naslovnici
         return '<div class="lcell pz-cell' + (z.active ? '' : ' pris-neakt') + '"><button class="row pz" type="button" data-zid="' + z.id + '" aria-haspopup="dialog" title="' + escape_(pod) + '" style="' + naslovnica(barva, z.id) + '">' +
-          '<span><span class="row-name"><span class="row-nm">' + escape_(z.ime) + '</span></span><span class="row-legal">' + escape_(stanje) + '</span></span>' +
-          '<span class="num pris-zap-ure">' + escape_(danesTxt) + '</span><span class="chev" aria-hidden="true">›</span></button>' +
+          '<span><span class="row-name"><span class="row-nm">' + escape_(z.ime) + '</span><span class="pz-cov-st' + (notri && !brezOdhoda ? ' notri' : '') + '">' + escape_(stanje) + '</span>' + (ureTxt ? '<span class="pz-cov-ure">' + escape_(ureTxt) + '</span>' : '') + '</span></span>' +
+          '<span class="chev" aria-hidden="true">›</span></button>' +
           '<div class="arts pris-zap-det">' + det + '</div></div>';
       }
       // ENA vrstica na zaposlenega: ime · stanje · ure danes (prej tri: ime, kartica, značka —

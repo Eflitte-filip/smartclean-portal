@@ -3046,6 +3046,14 @@ html.sc-sam{--vrh:max(12px,env(safe-area-inset-top));}
   radial-gradient(28% 130% at 13% 112%,color-mix(in oklab,var(--c2,#cdd3d8) calc(var(--sez-a2) * var(--j,1)),transparent),transparent 76%);}
 html[data-view] .pz-mreza .row .num::before{content:none;}
 .v5[data-view="grid"] .pz-mreza .lcell:not(.open) .row .num{grid-column:1 / -1;}
+/* stanje na naslovnici, pod imenom: prisoten v barvi besedila naslovnice, odsoten zbledelo; pod naslovnico ni ničesar */
+.v5 .pz-mreza .pz-cov-st{flex-basis:100%;font-size:clamp(11px,4.2cqi,14px);font-weight:400;letter-spacing:0;line-height:1.3;color:color-mix(in srgb,var(--cov-ink) 52%,transparent);}
+.v5 .pz-mreza .pz-cov-st.notri{color:color-mix(in srgb,var(--cov-ink) 86%,transparent);font-weight:500;}
+.v5 .pz-mreza .pz-cov-ure{flex-basis:100%;margin-top:-2px;font-size:clamp(10px,3.8cqi,13px);font-weight:400;letter-spacing:0;line-height:1.3;color:color-mix(in srgb,var(--cov-ink) 52%,transparent);font-variant-numeric:tabular-nums;}
+.v5[data-view="grid"] .pz-mreza .lcell:not(.open) .row .row-name{gap:4px 8px;align-content:center;}   /* ime, stanje in ure skupaj na sredini */
+.okno .okno-kartica .pz-cov-ure{display:block;font-size:var(--fs-13);color:var(--mid);}
+/* okno zaposlenega (kopija kartice v glavi): stanje kot podnaslov */
+.okno .okno-kartica .pz-cov-st{display:block;margin-top:2px;font-size:var(--fs-13);font-weight:400;color:var(--mid);}
 .v5[data-view="grid"] .pz-mreza .lcell.pris-neakt:not(.open) .row{opacity:1;}
 .v5[data-view="grid"] .pz-mreza .lcell.pris-neakt:not(.open) .row .row-name{filter:grayscale(1);opacity:.7;}
 
