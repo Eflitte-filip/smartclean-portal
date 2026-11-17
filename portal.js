@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.06 · BETA';
+  var APP_VERZIJA = '5.07 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -1242,6 +1242,8 @@
     const user = _gu && _gu.data && _gu.data.user;
     if (!user) { ZAGON_NAPAKA = (_gu && _gu.error) || new Error('ni uporabnika'); return false; }
     JAZ = user.id;
+    // hkrati s profilom: stranke in pravice vlog (neodvisni) — prej trije zaporedni klici
+    var _orgeP = naloziOrge(), _vlogeP = naloziRoleCfg().catch(function () {});
     let profil = null;
     { const _pr = await sb.from('profiles').select('full_name,is_staff,super_admin,zaposleni,nastavitve,avatar_url,phone,contact_email').eq('id', user.id).maybeSingle();
       profil = _pr && _pr.data ? _pr.data : null;
@@ -1265,12 +1267,15 @@
     $('auth').style.display = 'none';
     $('app').classList.add('show');
     if (POV.stanje !== 'ok') povRisi();   // trak iz (zdaj skrite) glave prijave v glavo portala
-    await naloziOrge();
+    await _orgeP;
     if (!OSEBJE && ORGSEZNAM.length === 1) MOJEPODJETJE = ORGSEZNAM[0];
-    try { await naloziRoleCfg(); } catch (e) {}
+    await _vlogeP;
     meni();
-    await naloziListe();
-    pojdi(zacetniRazdelek());   // ob ponovnem nalaganju ostane isti razdelek (#arhiv …), sicer Domov
+    // Domov potrebuje le zadnje liste: izriše se z njimi, vsi ostali pridejo v ozadju. Drugi začetni razdelek (#arhiv …) počaka na vse.
+    var _zac = zacetniRazdelek(), _delno = _zac === 'domov' && (OSEBJE || MOJPROFIL.super_admin);
+    await naloziListe(_delno ? { zadnji: true } : null);
+    pojdi(_zac);   // ob ponovnem nalaganju ostane isti razdelek (#arhiv …), sicer Domov
+    if (LISTI_DELNI) LISTI_POLNI = naloziListe().then(listiPolni, function () { LISTI_POLNI = null; });
     // Portal je sestavljen in prva stran izrisana → gladko umakni zagonski zaslon.
     try { requestAnimationFrame(zagonKonec); } catch (e) { zagonKonec(); }
     zazeniCustomSelecte();
@@ -1281,7 +1286,16 @@
     try { morebitiPromoBio(); } catch (e) {}
     // V OZADJU prednaloži razdelke, do katerih ima uporabnik dostop, da se ob
     // kliku odprejo TAKOJ (brez nalagalnega traku). Zamik, da ne moti prvega izrisa.
-    try { setTimeout(prednaloziRazdelke, 700); } catch (e) {}
+    try { setTimeout(function () { Promise.resolve(LISTI_POLNI).then(prednaloziRazdelke, prednaloziRazdelke); }, 700); } catch (e) {}   // prednalaganje z vsemi listi
+  }
+  // vsi listi so naloženi: odprt razdelek, ki jih bere, se tiho izriše znova (Domov: stolpci po mesecih)
+  function listiPolni() {
+    LISTI_POLNI = null;
+    var sec = document.querySelector('.sec:not(.hidden)'), id = sec && sec.id;
+    if (_okno || zaposlenZDelom()) return;
+    if (id === 'sec-domov') risiPregled(true);
+    else if (id === 'sec-arhiv') risiArhiv();
+    else if (id === 'sec-statistika') risiUcinek();
   }
   // Prednalaganje: renderira razdelke v skrite bloke (nastavi dataset.loaded), zamaknjeno,
   // da ne pošljemo vseh poizvedb naenkrat. Napake tiho spregleda.
@@ -1728,7 +1742,7 @@
     pgMiniZahtevaj();
     if (kam !== 'arhiv') arhIzbiraKonec();   // način »Izberi« velja le v Arhivu
     if (kam === 'domov') risiPregled();
-    if (kam === 'arhiv') risiArhiv();
+    if (kam === 'arhiv') { if (LISTI_POLNI) { pokaziNalaganje($('arhivList')); LISTI_POLNI.then(function () { if (_secZdaj === 'arhiv') risiArhiv(); }); } else risiArhiv(); }
     if (kam === 'fakture') risiFakture();
     if (kam === 'stranke') risiStranke();
     if (kam === 'katalog') risiKatalog();
@@ -1741,7 +1755,7 @@
     if (kam === 'cipi') risiCipe();
     if (kam === 'ceniki') risiCeniki();
     if (kam === 'prisotnost') risiPrisotnost();
-    if (kam === 'statistika' || kam === 'ucinek') risiUcinek();
+    if (kam === 'statistika' || kam === 'ucinek') { if (LISTI_POLNI) LISTI_POLNI.then(function () { if (_secZdaj === kam) risiUcinek(); }); else risiUcinek(); }
     if (kam === 'artikli') risiArtikli();
     if (kam === 'gorivo') risiGorivo();
     if (kam === 'admin') risiAdmin();
@@ -4177,7 +4191,20 @@
   }
 
   /* ══════════ SPREMNI LISTI ══════════ */
-  async function naloziListe() {
+  // Zagon (5.07): Domov se izriše že z listi zadnjih 45 dni (ena zahteva, ~300 listov), vsi ostali pridejo v ozadju
+  // (LISTI_POLNI = obljuba polnega nalaganja; dokler teče, je LISTI_DELNI). Arhiv in Statistika počakata nanjo.
+  var LISTI_DELNI = false, LISTI_POLNI = null, LISTI_ZADNJI_DNI = 45;
+  async function naloziListe(opt) {
+    if (opt && opt.zadnji && (OSEBJE || MOJPROFIL.super_admin)) {
+      const _mkZ = naloziManjkajoce();
+      const od = isoLokalno(new Date(Date.now() - LISTI_ZADNJI_DNI * 864e5));
+      const rz = await sb.from('delivery_notes').select('id,number,doc_date,total_pieces,weight_kg,org_id,issued_name,popravil,popravljeno_at,popravki,source,transport,potrjeno,legacy_id,opomba,opomba_avtor,opomba_at,opomba_stranka,opomba_evidenca')
+        .is('deleted_at', null).gte('doc_date', od).order('doc_date', { ascending: false }).order('id', { ascending: false }).range(0, 999);
+      if (rz.error || (rz.data || []).length >= 1000) return naloziListe();   // stara shema ali nenavadno veliko listov: kar vse
+      LISTI = rz.data || []; LISTI_NAPAKA = false; LISTI_DELNI = true; VSEHLISTOV = LISTI.length;
+      await Promise.race([_mkZ, new Promise(ok => setTimeout(ok, 600))]);
+      return;
+    }
     // Stranka bere prek pogleda brez internih stolpcev (66_listi_stranke.sql): interna
     // opomba, pisna opomba osebja in dnevnik popravkov ne pridejo v njen brskalnik.
     if (!OSEBJE && !MOJPROFIL.super_admin) {
@@ -4206,13 +4233,8 @@
     }
     LISTI_NAPAKA = !!(r && r.error);
     LISTI = (r && !r.error && r.data) ? r.data : [];
-    const {
-      count
-    } = await sb.from('delivery_notes').select('id', {
-      count: 'exact',
-      head: true
-    }).is('deleted_at', null);
-    VSEHLISTOV = count || 0;
+    LISTI_DELNI = false;
+    VSEHLISTOV = LISTI.length;   // naloženi so vsi (prej še ena zahteva samo za štetje)
     await Promise.race([_mk, new Promise(ok => setTimeout(ok, 1500))]);   // počasen odgovor le pozneje posodobi stanje na Domovu
     // Zberi liste s starim zapisom (postavka brez povezave na artikel → article_id IS NULL)
     // Pregled CELE tabele postavk je daleč najdražja poizvedba ob prijavi, rabimo
