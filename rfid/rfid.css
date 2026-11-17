@@ -83,6 +83,10 @@ html.rfa,html.rfa body{background:var(--bg);}
 .rfa-kos{display:flex;flex-direction:column;gap:14px;padding:20px 22px 22px;}
 .rfa-kos h3{margin:0;font-size:var(--fs-20);font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere;}
 .rfa-kos .okno-dl{margin:0;}
+/* madež / ponovno pranje: dva preklopna gumba enake širine; vklopljen = poln (barva besedila), kot izbran zavihek */
+.rfa-ozn{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.rfa-ozn .cgrp-btn{width:100%;justify-content:center;height:var(--ctrl-h,44px);font-size:var(--fs-15);}
+.rfa-ozn .cgrp-btn.on{background:var(--ink);border-color:var(--ink);color:var(--bg);}
 .rfa-kos-stanje{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-14);font-weight:500;}
 .rfa-kos-stanje::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--st-ok);}
 .rfa-kos-stanje.opoz{color:var(--st-warn);}

@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.08 · BETA';
+  var APP_VERZIJA = '5.09 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -9978,7 +9978,7 @@
   async function rfNalozi(org) {
     var gen = ++RF.gen;
     var rez = await Promise.all([
-      vseVrstice(function (a, b) { return sb.from('rfid_kosi').select('id,epc,org_id,article_id,naziv,stanje,pranj,zadnji_tip,zadnjic,created_at').eq('org_id', org).order('created_at').order('id').range(a, b); }),
+      vseVrstice(function (a, b) { return sb.from('rfid_kosi').select('id,epc,org_id,article_id,naziv,stanje,pranj,zadnji_tip,zadnjic,created_at,madez,ponovno,ponovno_st').eq('org_id', org).order('created_at').order('id').range(a, b); }),
       sb.from('articles').select('id,name,aktiven,sort_order').eq('org_id', org).order('sort_order')
     ]);
     if (gen !== RF.gen) return false;
@@ -10095,7 +10095,7 @@
     perRisi();
     PER.isciUra = setTimeout(async function () {
       var g = ++PER.isciGen;
-      var r = await sb.from('rfid_kosi').select('id,epc,org_id,article_id,naziv,stanje,pranj,zadnji_tip,zadnjic,created_at').ilike('epc', '%' + c + '%').order('zadnjic', { ascending: false, nullsFirst: false }).limit(20);
+      var r = await sb.from('rfid_kosi').select('id,epc,org_id,article_id,naziv,stanje,pranj,zadnji_tip,zadnjic,created_at,madez,ponovno,ponovno_st').ilike('epc', '%' + c + '%').order('zadnjic', { ascending: false, nullsFirst: false }).limit(20);
       if (g !== PER.isciGen) return;
       PER.najdeni = { q: c, kosi: r.error ? [] : (r.data || []) };
       perRisi();
@@ -10143,6 +10143,9 @@
     var arts = Object.keys(poArt).sort(function (a, b) { return poArt[b].length - poArt[a].length || a.localeCompare(b, 'sl'); });
     var skupine = [];
     if (pog.length) skupine.push({ k: 'pog', ime: 'Pogrešani', kosi: pog, meta: '', cls: 'opoz' });
+    var pon = akt.filter(function (k) { return k.ponovno; }), mad = akt.filter(function (k) { return k.madez; });
+    if (pon.length) skupine.push({ k: 'pon', ime: 'Za ponovno pranje', kosi: pon, meta: '' });
+    if (mad.length) skupine.push({ k: 'mad', ime: 'Z madežem', kosi: mad, meta: '' });
     arts.forEach(function (a) {
       var g = poArt[a], pp = g.filter(function (k) { return rfPogresan(k); }).length;
       var povp = Math.round(g.reduce(function (x, k) { return x + (k.pranj || 0); }, 0) / g.length);
@@ -10177,7 +10180,7 @@
       lst.innerHTML = g.kosi.slice().sort(function (a, b) { return String(b.zadnjic || '').localeCompare(String(a.zadnjic || '')); }).map(function (k) {
         var p = rfPogresan(k);
         return '<button type="button" class="rf-kos" data-kos="' + escape_(k.id) + '"><span class="rf-kos-epc">' + escape_(rfKratko(k.epc)) + '</span>' +
-          '<span class="rf-kos-kje' + (p ? ' opoz' : '') + '">' + escape_(g.k === 'pog' ? rfArtIme(k) + ' · ' + p : (p || rfKje(k))) + '</span><span class="rf-kos-pr">' + stevilo(k.pranj || 0) + ' pranj</span></button>';
+          '<span class="rf-kos-kje' + (p ? ' opoz' : '') + '">' + escape_((/^(pog|pon|mad)$/.test(g.k) ? rfArtIme(k) + ' · ' : '') + (p || rfKje(k))) + '</span><span class="rf-kos-pr">' + stevilo(k.pranj || 0) + ' pranj</span></button>';
       }).join('');
     }
     lst.hidden = !odpri;
@@ -10628,13 +10631,16 @@
     });
     box.querySelectorAll('.rf-kos').forEach(function (b) { b.addEventListener('click', function () { var k = RF.kosi.filter(function (x) { return x.id === b.dataset.id; })[0]; if (k) rfKosOdpri(k); }); });
   }
-  var RF_TIPI = { oznacevanje: 'Označen', prevzem: 'Prevzem', oddaja: 'Oddaja', oznacen: 'Prestavljen', stanje: 'Stanje' };
+  var RF_TIPI = { oznacevanje: 'Označen', prevzem: 'Prevzem', oddaja: 'Oddaja', oznacen: 'Prestavljen', stanje: 'Stanje', madez: 'Madež', ponovno: 'Ponovno pranje' };
   async function rfKosOdpri(k) {
     var w = sme('cipi', 'w');
     var back = document.createElement('div'); back.className = 'sc-modal-back';
     back.innerHTML = '<div class="sc-modal rf-kos-modal" role="dialog" aria-modal="true"><h4>' + escape_(rfArtIme(k)) + '</h4>' +
       '<dl class="okno-dl"><dt>Čip</dt><dd class="rf-epc">' + escape_(k.epc) + '</dd><dt>Stranka</dt><dd>' + escape_(ORGIME[k.org_id || RF.org] || '') + '</dd>' +
-      '<dt>Pranj</dt><dd>' + stevilo(k.pranj || 0) + '</dd><dt>Kje</dt><dd>' + escape_(rfPogresan(k) || rfKje(k)) + '</dd><dt>Označen</dt><dd>' + escape_(rfDatum(k.created_at)) + '</dd></dl>' +
+      '<dt>Pranj</dt><dd>' + stevilo(k.pranj || 0) + (k.ponovno_st ? ' · ' + stevilo(k.ponovno_st) + '× ponovno' : '') + '</dd><dt>Kje</dt><dd>' + escape_(rfPogresan(k) || rfKje(k)) + '</dd><dt>Označen</dt><dd>' + escape_(rfDatum(k.created_at)) + '</dd></dl>' +
+      (w && k.stanje === 'aktiven' ? '<div class="rf-ozn">' +
+        '<button type="button" class="cgrp-btn' + (k.madez ? ' on' : ' ghost') + '" data-ozn="madez" aria-pressed="' + !!k.madez + '">Madež</button>' +
+        '<button type="button" class="cgrp-btn' + (k.ponovno ? ' on' : ' ghost') + '" data-ozn="ponovno" aria-pressed="' + !!k.ponovno + '">Ponovno pranje</button></div>' : '') +
       '<div class="rf-zgod"></div>' +
       '<div class="sc-modal-acts">' + (w ? (k.stanje !== 'aktiven' ? '<button type="button" class="sc-modal-btn ghost" data-st="aktiven">Spet v uporabi</button>' : '<button type="button" class="sc-modal-btn ghost" data-st="izgubljen">Izgubljen</button><button type="button" class="sc-modal-btn ghost" data-st="odpisan">Odpiši</button>') : '') +
       '<button type="button" class="sc-modal-btn primary" data-zapri>Zapri</button></div></div>';
@@ -10645,6 +10651,19 @@
     document.addEventListener('keydown', onk, true);
     back.addEventListener('click', function (e) { if (e.target === back) zapri(); });
     back.querySelector('[data-zapri]').addEventListener('click', zapri);
+    // madež / ponovno pranje (rfid_oznaka): gumb ostane v oknu, okno stranke v Perilu se osveži
+    back.querySelectorAll('[data-ozn]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        var vrsta = b.dataset.ozn, vkl = !k[vrsta]; b.disabled = true;
+        var r = await sb.rpc('rfid_oznaka', { p_kos: k.id, p_vrsta: vrsta, p_vkljuci: vkl });
+        b.disabled = false;
+        if (r.error) { toast(napakaBesedilo(r.error)); return; }
+        ['madez', 'ponovno', 'ponovno_st'].forEach(function (x) { if (r.data && x in r.data) k[x] = r.data[x]; });
+        b.classList.toggle('on', !!k[vrsta]); b.classList.toggle('ghost', !k[vrsta]); b.setAttribute('aria-pressed', !!k[vrsta]);
+        logDodaj('Perilo', vrsta === 'madez' ? 'Madež' : 'Ponovno pranje', (ORGIME[k.org_id || RF.org] || '') + ' · ' + rfArtIme(k) + ' ' + rfKratko(k.epc) + ' · ' + (k[vrsta] ? 'označeno' : 'odstranjeno'));
+        if (typeof RF.poSpremembi === 'function') RF.poSpremembi(k);
+      });
+    });
     back.querySelectorAll('[data-st]').forEach(function (b) {
       b.addEventListener('click', async function () {
         b.disabled = true;

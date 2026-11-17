@@ -1,5 +1,15 @@
 [
  {
+  "v": "5.09",
+  "d": "2026-11-17",
+  "c": "2026-11-17T15:27:45+01:00",
+  "t": [
+   "Madež in ponovno pranje na kosu s čipom: na C72 v Poišči in v portalu v Perilu (okno kosa) sta gumba »Madež« in »Ponovno pranje«. Vsaka sprememba se zapiše v zgodovino kosa, šteje se tudi, kolikokrat je bil kos na ponovnem pranju.",
+   "Oddaja na C72 opozori, če je med skeniranimi kos, označen za ponovno pranje. Ponovno pranje se konča samo ob oddaji kosa, madež ostane, dokler ga ne odstraniš.",
+   "Perilo → okno stranke: novi skupini »Za ponovno pranje« in »Z madežem«."
+  ]
+ },
+ {
   "v": "5.08",
   "d": "2026-11-17",
   "c": "2026-11-17T15:06:56+01:00",

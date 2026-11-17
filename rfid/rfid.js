@@ -528,7 +528,7 @@
   })();
   var RF_NACINI = [['oddaja', 'Oddaja'], ['prevzem', 'Prevzem'], ['oznaci', 'Označi'], ['poisci', 'Poišči']];
   var RF_PRALNICA_DNI = 3, RF_NEVIDEN_DNI = 45;
-  var RF_TIPI = { oznacevanje: 'Označen', prevzem: 'Prevzem', oddaja: 'Oddaja', oznacen: 'Prestavljen', stanje: 'Stanje' };
+  var RF_TIPI = { oznacevanje: 'Označen', prevzem: 'Prevzem', oddaja: 'Oddaja', oznacen: 'Prestavljen', stanje: 'Stanje', madez: 'Madež', ponovno: 'Ponovno pranje' };
 
   function rfEpc(s) { var e = String(s || '').replace(/[^0-9A-Fa-f]/g, '').toUpperCase(); return /^[0-9A-F]{8,64}$/.test(e) ? e : null; }
   function rfKratko(epc) { return '…' + String(epc || '').slice(-8); }
@@ -575,7 +575,7 @@
       if (!manjka.length) return Promise.resolve();
       var g0 = RF.isciGen, ctl = new AbortController(), rok = setTimeout(function () { ctl.abort(); }, 15000);
       _rfIscem = (async function () {
-        var r = await sb.from('rfid_kosi').select('id,epc,org_id,article_id,naziv,stanje,zadnji_tip,zadnjic').in('epc', manjka).abortSignal(ctl.signal);
+        var r = await sb.from('rfid_kosi').select('id,epc,org_id,article_id,naziv,stanje,zadnji_tip,zadnjic,madez,ponovno').in('epc', manjka).abortSignal(ctl.signal);
         if (r.error) throw r.error;
         var nov = {}; (r.data || []).forEach(function (k) { (nov[k.epc] = nov[k.epc] || []).push(k); });
         manjka.forEach(function (e) { RF.idx[e] = nov[e] || []; if (RF.isciGen === g0) RF.vprasan[e] = 1; });   // vmes osveženo: ti se vprašajo znova
@@ -750,8 +750,9 @@
       if (!vsi.length) { nezn.push(e); return; }
       var orgi = {}; vsi.forEach(function (k) { orgi[k.org_id] = 1; });
       if (Object.keys(orgi).length > 1) { dvo.push(e); return; }
-      var k = vsi[0], g = str[k.org_id] || (str[k.org_id] = { org: k.org_id, ime: IME[k.org_id] || 'Stranka', n: 0, art: {}, ze: 0, zeCas: '' });
+      var k = vsi[0], g = str[k.org_id] || (str[k.org_id] = { org: k.org_id, ime: IME[k.org_id] || 'Stranka', n: 0, art: {}, ze: 0, zeCas: '', pon: 0 });
       g.n++; g.art[k.naziv] = (g.art[k.naziv] || 0) + 1; znanih++;
+      if (k.ponovno) g.pon++;   // označen za ponovno pranje: oddaja opozori (ob oddaji se oznaka konča)
       if (rfZeOddan(k)) { g.ze++; if (String(k.zadnjic) > g.zeCas) g.zeCas = String(k.zadnjic); }
     });
     var seznam = Object.keys(str).map(function (o) { return str[o]; }).sort(function (a, b) { return a.ime.localeCompare(b.ime, 'sl'); });
@@ -816,7 +817,8 @@
       lab.textContent = (r.znanih % 100 === 1 ? 'kos' : r.znanih % 100 === 2 ? 'kosa' : (r.znanih % 100 === 3 || r.znanih % 100 === 4) ? 'kosi' : 'kosov') + (r.stranke.length > 1 ? ' · ' + sklonStrank(r.stranke.length) : '');
       r.stranke.forEach(function (g) {
         var arti = Object.keys(g.art).sort(function (a, b) { return g.art[b] - g.art[a] || a.localeCompare(b, 'sl'); });
-        var ze = odd && g.ze ? '<div class="rf-str-ze">' + esc(rfZeBesedilo(g)) + '</div>' : '';
+        var ze = (odd && g.ze ? '<div class="rf-str-ze">' + esc(rfZeBesedilo(g)) + '</div>' : '') +
+          (odd && g.pon ? '<div class="rf-str-ze">' + esc(stevilo(g.pon) + ' ' + (g.pon % 100 === 1 ? 'kos je označen' : g.pon % 100 === 2 ? 'kosa sta označena' : (g.pon % 100 === 3 || g.pon % 100 === 4) ? 'kosi so označeni' : 'kosov je označenih') + ' za ponovno pranje') + '</div>' : '');
         vrst.push('<div class="rf-str' + (ze ? ' opoz' : '') + '"><div class="rf-str-h"><span>' + esc(g.ime) + '</span><button type="button" class="cgrp-btn ghost" data-rf="odstrani" data-org="' + esc(g.org) + '"' + dis + '>Odstrani</button><b>' + stevilo(g.n) + '</b></div>' + ze +
           arti.map(function (i) { return '<div class="rf-str-a"><span>' + esc(i) + '</span><span>' + stevilo(g.art[i]) + '</span></div>'; }).join('') + '</div>');
       });
@@ -1031,7 +1033,22 @@
   function rfRisiPoisci(t) {
     t.innerHTML = '<div class="uc-card rf-sken rf-isci">' + rfVnosHtml() + '</div><div id="rfaKos"></div>';
     rfVezi();
+    $('rfaKos').addEventListener('click', function (e) { var b = e.target.closest('[data-rf-ozn]'); if (b) rfOznaka(b); });
     rfRisiNajdene();
+  }
+  // madež / ponovno pranje: en kos naenkrat; sprememba je dogodek v zgodovini (rfid_oznaka)
+  async function rfOznaka(b) {
+    var n = RF.najdeni, k = n && n.kosi.filter(function (x) { return x.id === b.dataset.kos; })[0]; if (!k || b.disabled) return;
+    var vrsta = b.dataset.rfOzn, vkl = !k[vrsta];
+    b.disabled = true; b.classList.add('nalaga');
+    try {
+      var r = await zRokom(sb.rpc('rfid_oznaka', { p_kos: k.id, p_vrsta: vrsta, p_vkljuci: vkl }));
+      if (r.error) throw r.error;
+      var d = r.data || {};
+      ['madez', 'ponovno', 'ponovno_st'].forEach(function (x) { if (x in d) k[x] = d[x]; });
+      (RF.idx[k.epc] || []).forEach(function (x) { if (x.id === k.id) { x.madez = k.madez; x.ponovno = k.ponovno; } });   // oddaja opozori brez novega branja
+      zvUspeh(); rfRisiNajdene(); rfZgodovina(k, RF.gen);
+    } catch (e) { toast(napakaBesedilo(e)); b.disabled = false; b.classList.remove('nalaga'); }
   }
   async function rfPoisci(epcs, tiho) {
     if (tiho && RF.iscemKos) return;
@@ -1039,7 +1056,7 @@
     var gen = tiho ? RF.gen : ++RF.gen;
     if (!tiho) RF.iscemKos = true;
     try {
-      var r = await zRokom(sb.from('rfid_kosi').select('id,epc,org_id,article_id,naziv,stanje,pranj,zadnji_tip,zadnjic,created_at').in('epc', epcs.slice(0, 50)));
+      var r = await zRokom(sb.from('rfid_kosi').select('id,epc,org_id,article_id,naziv,stanje,pranj,zadnji_tip,zadnjic,created_at,madez,ponovno,ponovno_st').in('epc', epcs.slice(0, 50)));
       if (r.error) throw r.error;
       if (gen !== RF.gen) return;
       var vsi = r.data || [], prvi = epcs.filter(function (e) { return vsi.some(function (k) { return k.epc === e; }); })[0] || epcs[0];
@@ -1072,8 +1089,12 @@
     el.innerHTML = n.kosi.map(function (k) {
       var p = rfPogresan(k), cls = k.stanje !== 'aktiven' ? ' tiho' : p ? ' opoz' : '';
       var zg = n.zgod[k.id];
-      return '<div class="uc-card rfa-kos"><h3>' + esc(k.naziv || 'Kos') + '</h3><span class="rfa-kos-stanje' + cls + '">' + esc(p || rfKje(k)) + '</span>' +
-        '<dl class="okno-dl"><dt>Stranka</dt><dd>' + esc(IME[k.org_id] || '') + '</dd><dt>Pranj</dt><dd>' + stevilo(k.pranj || 0) + '</dd><dt>Označen</dt><dd>' + esc(datumCas(k.created_at)) + '</dd><dt>Čip</dt><dd class="rf-epc">' + esc(k.epc) + '</dd></dl>' +
+      var ozn = [k.madez ? 'madež' : '', k.ponovno ? 'za ponovno pranje' : ''].filter(Boolean).join(' · ');
+      var gumbi = k.stanje === 'aktiven' ? '<div class="rfa-ozn">' +
+        '<button type="button" class="cgrp-btn' + (k.madez ? ' on' : ' ghost') + '" data-rf-ozn="madez" data-kos="' + esc(k.id) + '" aria-pressed="' + !!k.madez + '">Madež</button>' +
+        '<button type="button" class="cgrp-btn' + (k.ponovno ? ' on' : ' ghost') + '" data-rf-ozn="ponovno" data-kos="' + esc(k.id) + '" aria-pressed="' + !!k.ponovno + '">Ponovno pranje</button></div>' : '';
+      return '<div class="uc-card rfa-kos"><h3>' + esc(k.naziv || 'Kos') + '</h3><span class="rfa-kos-stanje' + cls + '">' + esc((p || rfKje(k)) + (ozn ? ' · ' + ozn : '')) + '</span>' +
+        '<dl class="okno-dl"><dt>Stranka</dt><dd>' + esc(IME[k.org_id] || '') + '</dd><dt>Pranj</dt><dd>' + stevilo(k.pranj || 0) + (k.ponovno_st ? ' · ' + stevilo(k.ponovno_st) + '× ponovno' : '') + '</dd><dt>Označen</dt><dd>' + esc(datumCas(k.created_at)) + '</dd><dt>Čip</dt><dd class="rf-epc">' + esc(k.epc) + '</dd></dl>' + gumbi +
         (zg && zg.length ? '<div class="rf-zgod">' + zg.map(function (z) { return '<div class="rf-zg"><span>' + esc(z.t) + '</span><span class="u-sub">' + esc(datumCas(z.d)) + '</span></div>'; }).join('') + '</div>' : '') + '</div>';
     }).join('');
   }
@@ -1629,7 +1650,7 @@
   /* ══════════ NOVA RAZLIČICA ══════════
      C72 je lahko odprt ves dan: ko je objavljena nova različica, se aplikacija naloži znova, a le, ko miruje
      (brez skeniranja, okna, rezultata in branja) — nič se ne izgubi. */
-  var RF_VER = '5.08';   // ob objavi enako kot APP_VERZIJA v portalu (prvi »v« v spremembe.json)
+  var RF_VER = '5.09';   // ob objavi enako kot APP_VERZIJA v portalu (prvi »v« v spremembe.json)
   async function rfPreveriRazlicico() {
     try {
       var r = await _izvFetch('../spremembe.json?v=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;

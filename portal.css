@@ -3446,6 +3446,9 @@ html.v5:not(.sc-sam) .auth::after{bottom:0;}
 .v5 .rf-kos-kje.opoz{color:var(--st-warn);}
 .v5 .rf-kos-pr{font-size:var(--fs-13);color:var(--mid);white-space:nowrap;font-variant-numeric:tabular-nums;}
 .v5 .rf-kos-modal{max-width:460px;}
+.v5 .rf-kos-modal .rf-ozn{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 0;}
+.v5 .rf-kos-modal .rf-ozn .cgrp-btn{width:100%;justify-content:center;}
+.v5 .rf-ozn .cgrp-btn.on{background:var(--ink);border-color:var(--ink);color:var(--bg);}
 
 /* ══════════ REKLAMACIJE (5.08) — evidenca; okno: podrobnosti, fotografije, dejanja; obrazec v istem oknu ══════════ */
 .okno .rekl-okno{padding:20px 24px 24px;}
