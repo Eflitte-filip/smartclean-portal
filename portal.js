@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.12 · BETA';
+  var APP_VERZIJA = '5.13 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -11314,7 +11314,7 @@
     { var _no = $('nuOdpri'); if (_no) _no.classList.toggle('hidden', !smeVabiti()); }
     const [rLjudje, {
       data: clanstva
-    }, rPini, rPov] = await Promise.all([sb.from('profiles').select('id,email,full_name,is_staff,super_admin,zaposleni,active,last_login,last_seen,web_dostop,rfid_dostop').order('email'), sb.from('memberships').select('user_id,org_id'),
+    }, rPini, rPov] = await Promise.all([sb.from('profiles').select('id,email,full_name,is_staff,super_admin,zaposleni,active,last_login,last_seen,web_dostop,rfid_dostop,dostava_dostop').order('email'), sb.from('memberships').select('user_id,org_id'),
       sb.rpc('app_pini_nastavljeni'),
       smeVabiti() ? sb.from('povabila').select('id,koda,vloga,org_id,rfid_dostop,opomba,ustvarjeno,velja_do').is('porabljeno', null).is('preklicano', null).gt('velja_do', new Date().toISOString()).order('ustvarjeno', { ascending: false }) : Promise.resolve({ data: [] })]);
     POVABILA = (rPov && !rPov.error && rPov.data) || [];
@@ -11381,6 +11381,7 @@
         ${(jaz || lahkoUredi) ? `<button data-act="ime" data-id="${u.id}" data-ime="${escape_(u.full_name || '')}">Preimenuj</button>` : ''}
         ${(jaz || lahkoUredi) ? `<button class="u-web${webOn ? ' on' : ''}" data-act="web" data-id="${u.id}" data-v="${webOn ? 0 : 1}">${webOn ? 'Aplikacija: dovoljena' : 'Aplikacija: ne'}</button>` : ''}
         ${(lahkoUredi && JE_SUPER() && vlogaVal === 'zaposleni') ? `<button class="u-web${u.rfid_dostop ? ' on' : ''}" data-act="rfid" data-id="${u.id}" data-v="${u.rfid_dostop ? 0 : 1}">${u.rfid_dostop ? 'RFID: dovoljena' : 'RFID: ne'}</button>` : ''}
+        ${(lahkoUredi && JE_SUPER() && vlogaVal === 'zaposleni') ? `<button class="u-web${u.dostava_dostop ? ' on' : ''}" data-act="dostava" data-id="${u.id}" data-v="${u.dostava_dostop ? 0 : 1}">${u.dostava_dostop ? 'Dostava: dovoljena' : 'Dostava: ne'}</button>` : ''}
         ${lahkoUredi ? `<button data-act="active" data-id="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? 'Izklopi' : 'Vklopi'}</button>` : ''}
         ${(jaz || lahkoUredi) ? `<button data-act="pw" data-id="${u.id}">Novo geslo</button>` : ''}
         ${(jaz || lahkoUredi) ? `<button class="u-pin${pinSet ? ' on' : ''}" data-act="pin" data-id="${u.id}" data-ime="${escape_(u.full_name || '')}">${pinSet ? 'PIN nastavljen' : 'PIN za app'}</button>` : ''}
@@ -11503,6 +11504,12 @@
     if (act === 'rfid') {   // aplikacija SmartClean RFID na C72 (74_rfid_aplikacija.sql); osebje in admin jo imajo po vlogi
       const { error } = await sb.from('profiles').update({ rfid_dostop: btn.dataset.v === '1' }).eq('id', id);
       uMsg(error ? 'Ni uspelo: ' + escape_(error.message) : (btn.dataset.v === '1' ? 'Aplikacija RFID vključena.' : 'Aplikacija RFID izključena.'), !!error);
+      loadUsers();
+      return;
+    }
+    if (act === 'dostava') {   // voznikova aplikacija dostava.smartclean.si (20261117160000_dostava_voznik.sql); osebje in admin jo imajo po vlogi
+      const { error } = await sb.from('profiles').update({ dostava_dostop: btn.dataset.v === '1' }).eq('id', id);
+      uMsg(error ? 'Ni uspelo: ' + escape_(error.message) : (btn.dataset.v === '1' ? 'Aplikacija Dostava vključena.' : 'Aplikacija Dostava izključena.'), !!error);
       loadUsers();
       return;
     }
@@ -12322,12 +12329,16 @@
           .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_note_items' }, zivPostavke)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rfid_dogodki' }, zivCipi)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rfid_seje' }, zivCipi)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'dostave' }, zivDostave)
           .subscribe(function (st) { _zivZivo = st === 'SUBSCRIBED'; });
       });
     } catch (e) {}
     document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() - _zivZadnje > 60000) { zivListi(); zivCipi(); } });
     setInterval(function () { if (!document.hidden && !_zivZivo && Date.now() - _zivZadnje > 120000) { zivListi(); zivCipi(); } }, 30000);
   }
+  // voznik potrdi v dostava.smartclean.si → koledar (če je bil odprt) se osveži sam
+  var _zivDostT = null;
+  function zivDostave() { _zivZadnje = Date.now(); if (!DOST.mesec) return; clearTimeout(_zivDostT); _zivDostT = setTimeout(dostOsvezi, 600); }
   function zivListi() { pozabiDeli(); clearTimeout(_zivT); _zivT = setTimeout(zivOsveziListe, 800); }
   // postavke je spremenila druga naprava (urejanje, preimenovanje artikla): shranjene postavke tega lista ne veljajo več
   function zivPostavke(p) { var n = p && ((p.new && p.new.note_id) || (p.old && p.old.note_id)); pozabiPostavke(n || null); zivListi(); }   // zivListi pozabi tudi skupne podatke   // več sprememb naenkrat = ena osvežitev
