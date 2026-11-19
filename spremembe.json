@@ -1,5 +1,14 @@
 [
  {
+  "v": "5.15",
+  "d": "2026-11-19",
+  "c": "2026-11-19T09:53:44+01:00",
+  "t": [
+   "Ko ustvariš spremni list, se seznam vedno pomakne do njega in ga za trenutek poudari, tudi če si bil prej nižje na seznamu.",
+   "Če bi nov list skrilo iskanje ali filter (stranka, obdobje, nepotrjeni), se filter počisti; pri razvrščanju po stranki ali teži se odpre stran, na kateri je."
+  ]
+ },
+ {
   "v": "5.14",
   "d": "2026-11-19",
   "c": "2026-11-19T09:46:01+01:00",

@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.14 · BETA';
+  var APP_VERZIJA = '5.15 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -4858,7 +4858,7 @@
     void back.offsetWidth; back.classList.add('show');   // zatemnitev začne takoj (brez čakanja na naslednji okvir)
     // Okno iz gumba + ne raste iz drobnega kroga (pomanjšano okno je bilo raztegnjen pravokotnik z odrezano vsebino):
     // pride kot pogovorna okna portala — iz rahle pomanjšave, kratka pot navzgor, gumb ostane na mestu.
-    o.pojav = !!(moznosti.pojav || kartica.classList.contains('tb-prim'));
+    o.pojav = !!(moznosti.pojav || kartica.classList.contains('tb-prim') || kartica.classList.contains('nov-plav'));
     if (oknoMirno() || !panel.animate) { if (!o.pojav) kartica.classList.add('okno-vir'); back.classList.add('okno-cel'); oknoFokus(o); return; }
     o.morf = true;
     if (o.pojav) {
@@ -5300,6 +5300,7 @@
     return _arhCeneP;
   }
   var ARH_NA_STRAN = 60, _arhStran = 0, _arhKljuc = null;
+  var ARH_PRIKAZI_ID = null;   // nov spremni list: seznam se postavi na njegovo stran (po potrebi brez filtrov, ki bi ga skrili)
   // Številčenje strani: ‹ 1 … 4 5 6 … 15 ›  ·  61–120 od 852
   function arhStraniHtml(n, zac, vseh) {
     if (n <= 1) return '';
@@ -5366,6 +5367,15 @@
     const kljucF = [q, org, _od, _do, sortv, ARH_NEPOTRJENI].join('|');
     arhFilterOznaka(vrstice.length);
     if (kljucF !== _arhKljuc) { _arhKljuc = kljucF; _arhStran = 0; }
+    if (ARH_PRIKAZI_ID) {
+      const ix = vrstice.findIndex(l => String(l.id) === ARH_PRIKAZI_ID);
+      if (ix >= 0) { _arhStran = Math.floor(ix / ARH_NA_STRAN); ARH_PRIKAZI_ID = null; }
+      else if (q || org || _od || _do || ARH_NEPOTRJENI) {   // filter ga skriva: brez filtrov (razvrstitev ostane)
+        $('arhivIsci').value = ''; if ($('arhivOrg')) $('arhivOrg').value = ''; if ($('arhivOd')) $('arhivOd').value = ''; if ($('arhivDo')) $('arhivDo').value = '';
+        ARH_NEPOTRJENI = false;
+        return risiArhiv();
+      } else ARH_PRIKAZI_ID = null;
+    }
     const nStrani = Math.max(1, Math.ceil(vrstice.length / ARH_NA_STRAN));
     if (_arhStran > nStrani - 1) _arhStran = nStrani - 1;
     if (_arhStran < 0) _arhStran = 0;
@@ -6562,16 +6572,16 @@
         _items: postavke.map(p => ({ naziv: p.naziv, kosov: p.kosov })) };
       toast('Spremni list ' + seq + '/' + leto + ' ustvarjen', { besedilo: 'Natisni', ob: () => natisniList(_zaTisk) });
       await naloziListe();
-      _arhStran = 0;   // nov list je na vrhu prve strani
-      risiArhiv();
       const nid = nova && nova.id;
+      ARH_PRIKAZI_ID = nid ? String(nid) : null;   // seznam na strani z novim listom (lastnik, 2026-11-19: »vedno scrolla do tja, kjer je bil ustvarjen«)
+      risiArhiv();
       if (_okno && _okno.vsebina === box) {
-        // Okno se skrči naravnost v kartico novega lista (če je v trenutnem filtru), sicer nazaj v gumb.
+        // Okno se zapre (iz + izgine, iz kartice se skrči vanjo), nato se stran vedno pomakne do novega lista in ga poudari.
         const najdiNov = () => nid ? document.querySelector('#arhivList .a-row[data-id="' + String(nid).replace(/"/g, '\\"') + '"]') : null;
         if (najdiNov() && !$('sec-arhiv').classList.contains('hidden')) {
           _okno.najdi = najdiNov; _okno.id = String(nid);
           const prej = _okno.obZaprtju;
-          _okno.obZaprtju = function (k) { prej(k); if (k) { k.classList.add('arh-flash'); setTimeout(function () { k.classList.remove('arh-flash'); }, 1700); } };
+          _okno.obZaprtju = function (k) { prej(k); pokaziList(nid); };
         }
         novListZapri(box);
         if (!$('sec-domov').classList.contains('hidden')) risiPregled();   // ustvarjeno z Domova: ostane na Domovu
