@@ -4061,3 +4061,20 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
   .v5 .okno-back.okno-tipk .okno{height:calc(var(--tipk-h) - var(--vrh));max-height:none;}
   .v5 .okno-back.okno-tipk .okno .u-acts.nl-akc{padding-bottom:12px;}   /* domači indikator je pod tipkovnico */
 }
+
+/* ══════════ PLAVAJOČI + (5.14) — Spremni listi ══════════
+   Pokaže se, ko gumb »Nov spremni list« v glavi zdrsne pod zgornjo vrstico; okno zraste iz njega. Pod oknom (55), nad vrstico (20). */
+.nov-plav{position:fixed;right:calc(28px + env(safe-area-inset-right));bottom:calc(28px + env(safe-area-inset-bottom));z-index:40;width:56px;height:56px;margin:0;padding:0;
+  display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--ink);color:var(--bg);box-shadow:var(--shadow-lg);cursor:pointer;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(14px);
+  transition:opacity var(--gib-t2,.28s) var(--gib,ease),transform var(--gib-t2,.28s) var(--gib,ease),visibility 0s linear var(--gib-t2,.28s);}
+.nov-plav.show{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition:opacity var(--gib-t2,.28s) var(--gib,ease),transform var(--gib-t2,.28s) var(--gib,ease),visibility 0s;}
+.nov-plav svg{width:24px;height:24px;}
+.nov-plav:active{transform:scale(.96);}
+.nov-plav:focus-visible{outline:2px solid var(--ink);outline-offset:3px;}
+@media(hover:hover){ .nov-plav.show:hover{opacity:.88;} }
+@media(max-width:560px){
+  .nov-plav{right:calc(16px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));}
+  html.z-plav .sc-toast{bottom:calc(88px + env(safe-area-inset-bottom));}   /* obvestilo nad +, ne čez njega */
+}
+@media print{ .nov-plav{display:none!important;} }

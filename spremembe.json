@@ -1,5 +1,13 @@
 [
  {
+  "v": "5.14",
+  "d": "2026-11-19",
+  "c": "2026-11-19T09:46:01+01:00",
+  "t": [
+   "Spremni listi: ko se pomakneš navzdol, ostane spodaj desno okrogel gumb +, ki odpre nov spremni list. Na vrhu seznama ga ni (tam je gumb v glavi), med izbiranjem več listov tudi ne."
+  ]
+ },
+ {
   "v": "5.13",
   "d": "2026-11-17",
   "c": "2026-11-17T16:55:05+01:00",

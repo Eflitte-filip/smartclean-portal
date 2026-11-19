@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.13 · BETA';
+  var APP_VERZIJA = '5.14 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -5453,6 +5453,7 @@
     ARH_IZB = new Set();
     arhIzbiraGumb(true);
     arhIzbiraBar().classList.add('show');
+    arhPlavOsvezi();
     risiArhiv();
   }
   function arhIzbiraKonec() {
@@ -5460,6 +5461,7 @@
     ARH_IZB = null;
     arhIzbiraGumb(false);
     if (_arhBar) _arhBar.classList.remove('show');
+    arhPlavOsvezi();
     var l = $('arhivList');
     if (l) {
       l.classList.remove('izbira');
@@ -5574,6 +5576,28 @@
   { const dd = $('arhivDo'); if (dd) dd.addEventListener('change', risiArhiv); }
   { const xb = $('arhivObdX'); if (xb) xb.addEventListener('click', () => { const a = $('arhivOd'), b = $('arhivDo'); if (a) a.value = ''; if (b) b.value = ''; risiArhiv(); }); }
   { const _nb = $('arhivNovBtn'); if (_nb) _nb.addEventListener('click', () => novList()); }
+  // »+« vedno pri roki (lastnik, 2026-11-19): ko gumb v glavi zdrsne pod zgornjo vrstico, se spodaj desno pokaže
+  // okrogel + (okno zraste iz njega in se vanj vrne). Med izbiranjem ga ni (spodaj je vrstica izbire).
+  var _arhPlav = null, _arhPlavZunaj = false;
+  function arhPlavOsvezi() {
+    if (!_arhPlav) return;
+    var sec = $('sec-arhiv'), bar = $('arhivActBar');
+    var vid = _arhPlavZunaj && !!sec && !sec.classList.contains('hidden') && !!bar && !bar.classList.contains('hidden') && !ARH_IZB;
+    _arhPlav.classList.toggle('show', vid);
+    _arhPlav.tabIndex = vid ? 0 : -1;
+    document.documentElement.classList.toggle('z-plav', vid);
+  }
+  { const _nb = $('arhivNovBtn');
+    if (_nb && 'IntersectionObserver' in window) {
+      const f = _arhPlav = document.createElement('button');
+      f.type = 'button'; f.className = 'nov-plav'; f.tabIndex = -1; f.title = 'Nov spremni list'; f.setAttribute('aria-label', 'Nov spremni list');
+      f.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+      document.body.appendChild(f);
+      f.addEventListener('click', () => novList(f));
+      const tb = document.querySelector('.topbar'), vrh = tb ? Math.round(tb.getBoundingClientRect().height) || 65 : 65;
+      new IntersectionObserver(e => { _arhPlavZunaj = !e[e.length - 1].isIntersecting; arhPlavOsvezi(); }, { rootMargin: '-' + vrh + 'px 0px 0px 0px' }).observe(_nb);
+      new MutationObserver(arhPlavOsvezi).observe($('sec-arhiv'), { attributes: true, attributeFilter: ['class'] });
+    } }
   // Domov: isti nov spremni list — odpre se v Spremnih listih (okno zraste iz tamkajšnjega gumba, nov list se pokaže v seznamu)
   { const _db = $('domovNovBtn'); if (_db) _db.addEventListener('click', () => novList(_db)); }
   { const _bl = $('arhivBrezBtn'); if (_bl) _bl.addEventListener('click', () => manjkaOdpri()); }
