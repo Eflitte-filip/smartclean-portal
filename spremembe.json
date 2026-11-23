@@ -1,5 +1,14 @@
 [
  {
+  "v": "5.17",
+  "d": "2026-11-23",
+  "c": "2026-11-23T22:59:07+01:00",
+  "t": [
+   "Telefon: okno za nov spremni list (in druga okna iz gumba +) zdrsne od spodaj kot sistemski list v Safariju in ob zaprtju zdrsne nazaj dol. Ni več pretapljanja strani in obrazca. Na računalniku ostane kot prej.",
+   "Aplikacija na začetnem zaslonu: pas pod uro ob odpiranju okna potemni skupaj s stranjo, kot v Safariju (prej je ostal svetel)."
+  ]
+ },
+ {
   "v": "5.16",
   "d": "2026-11-23",
   "c": "2026-11-23T22:39:05+01:00",

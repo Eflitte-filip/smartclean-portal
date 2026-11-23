@@ -867,7 +867,7 @@
     OSEBJE = false,
     MOJEPODJETJE = null;
   var MOJPROFIL = {};
-  var APP_VERZIJA = '5.16 · BETA';
+  var APP_VERZIJA = '5.17 · BETA';
   // stran in koda iste različice; sicer (objava v teku, star predpomnilnik) enkrat znova na različico — brez zanke
   (function () {
     var v = APP_VERZIJA.split(' ')[0], k = 'sc-stara-stran';
@@ -4666,6 +4666,10 @@
      ne scale, zato se besedilo med animacijo ne razteguje. */
   var _okno = null;
   var OKNO_KRIVULJA = GIB_KRIVULJA;
+  // Telefon (okno čez cel zaslon): okno iz gumba + pride od spodaj kot sistemski list v Safariju (Deli, Dodaj na začetni zaslon)
+  // in odide nazaj dol — brez pretapljanja strani in obrazca (lastnik, 2026-11-23). Na večjem zaslonu ostane pogovorno okno.
+  var OKNO_LIST_MS = 520, OKNO_LIST_ZAPRI_MS = 320;
+  function oknoList() { try { return window.matchMedia('(max-width:560px)').matches; } catch (e) { return false; } }
   var OKNO_RAST_MS = 480, OKNO_KRCENJE_MS = 340, OKNO_POJAV_MS = 600;   // pojav = --gib-t4, kot .sc-modal
   // telefon: okno v mirovanju nima zaobljenih robov, med rastjo in krčenjem pa jih ima (kartica je zaobljena)
   function oknoRobovi(panel, odpri, ms) {
@@ -4863,6 +4867,13 @@
     o.morf = true;
     if (o.pojav) {
       var konecPojava = function () { o.morf = false; if (o.zapiram) return; o.visina = panel.offsetHeight; back.classList.add('okno-cel'); oknoVidno(); };
+      if (oknoList()) {
+        o.list = true; back.classList.add('okno-list');   // med premikom zgornji rob in senca (temna tema: list se loči od potemnjene strani)
+        oknoRobovi(panel, true, OKNO_LIST_MS);
+        panel.animate([{ transform: 'translate3d(0,100%,0)' }, { transform: 'none' }], { duration: OKNO_LIST_MS, easing: OKNO_KRIVULJA }).finished.then(konecPojava, konecPojava);
+        oknoFokus(o);
+        return;
+      }
       oknoRobovi(panel, true, OKNO_POJAV_MS);
       panel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, delay: 40, easing: 'ease', fill: 'backwards' });   // stran se najprej zatemni, nato pride okno
       panel.animate([{ transform: 'translate3d(0,14px,0) scale(.965)' }, { transform: 'none' }], { duration: OKNO_POJAV_MS, easing: OKNO_KRIVULJA }).finished.then(konecPojava, konecPojava);
@@ -5092,6 +5103,11 @@
     o.back.classList.remove('show');
     if (o.pojav && !tipk) {   // okno iz gumba +: odide tako, kot je prišlo (izhod pogovornih oken portala)
       o.panel.getAnimations().forEach(function (a) { a.cancel(); });
+      if (o.list) {   // telefon: list zdrsne nazaj dol
+        oknoRobovi(o.panel, false, OKNO_LIST_ZAPRI_MS);
+        o.panel.animate([{ transform: 'none' }, { transform: 'translate3d(0,100%,0)' }], { duration: OKNO_LIST_ZAPRI_MS, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' }).finished.then(konec, konec);
+        return;
+      }
       oknoRobovi(o.panel, false, 220);
       o.panel.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease', fill: 'forwards' });
       o.panel.animate([{ transform: 'none' }, { transform: 'translate3d(0,14px,0) scale(.965)' }], { duration: 220, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' }).finished.then(konec, konec);

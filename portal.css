@@ -3826,6 +3826,12 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
    Telefon (aplikacija na začetnem zaslonu in Safari): ena barva od ure do vsebine — vrstica na vrhu brez črte in brez
    zamegljenega prehoda. Okno kartice je stran čez cel zaslon v barvi ozadja; naslovnica kartice je pasica, ki se proti uri
    prelije v barvo ozadja (brez roba pod uro); Nazaj levo, × desno. Trak #sc-vrh ostane edini element na vrhnjem robu. */
+/* Aplikacija na začetnem zaslonu (5.17): trak #sc-vrh je nad vsem, zato je ob odpiranju okna ostal svetel, stran pod njim pa je
+   potemnela (svetla črta nad oknom). V Safariju je vrh del strani in potemni z njo — trak zdaj naredi isto: le barva, element ostane.
+   Na telefonu, ko je okno odprto (okno-cel: ozadje v barvi strani), je spet v barvi strani — natanko kot vrh v Safariju. */
+html.sc-sam #sc-vrh{transition:background-color .16s ease;}
+html.sc-sam:has(.okno-back.show) #sc-vrh,html.sc-sam:has(.sc-modal-back.show) #sc-vrh{background:color-mix(in srgb,var(--bg) 58%,#000);transition-duration:.3s;}
+@media(max-width:560px){ html.sc-sam:has(.okno-back.show.okno-cel):not(:has(.sc-modal-back.show)) #sc-vrh{background:var(--bg);transition-duration:.2s;} }
 .okno-nazaj{display:none;}
 .okno-pasica{display:none;position:relative;flex:0 0 auto;height:clamp(124px,36vw,156px);overflow:hidden;isolation:isolate;
   background:linear-gradient(var(--bg) 0%,color-mix(in srgb,var(--bg) 0%,transparent) 62%),
@@ -3840,7 +3846,8 @@ html.v5.zm-brez-teksture{--cov-zrno:none;--cov-zrno-o:0;}
 @media(max-width:560px){
   .v5 .okno-back{padding:var(--vrh) 0 0;align-items:stretch;}
   /* odprto okno: polno ozadje v barvi teme — Safari 26 barvo pasov (ura, spodnja vrstica) vzame iz fiksnega elementa ob robu */
-  .v5 .okno-back.okno-cel .okno-zatemni{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;transition:none;}
+  .v5 .okno-back.okno-list:not(.okno-cel) .okno{box-shadow:0 -1px 0 var(--line-strong),0 -16px 44px -18px rgba(0,0,0,.5);}
+  .v5 .okno-back.okno-cel .okno-zatemni{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;transition:background-color .2s ease;}   /* ko list pride do vrha: pas pod uro se mehko prelije v barvo strani */
   .v5 .okno{width:100%;height:calc(100dvh - var(--vrh));max-height:none;border:0;border-radius:0;box-shadow:none;background:var(--bg);}
   .v5 .okno-telo{padding-bottom:env(safe-area-inset-bottom);}
   .v5 .okno .u-acts.nl-akc{background:var(--bg);}   /* okno je na telefonu v barvi strani, ne površine */
