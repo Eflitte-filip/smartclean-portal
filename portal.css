@@ -2937,15 +2937,15 @@ html.sc-sam{--vrh:max(12px,env(safe-area-inset-top));}
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open){container-type:inline-size;position:relative;}
 .v5[data-view="grid"] .rows,.v5[data-view="grid"] .fak-grid,.v5[data-view="grid"] :is(#cenikList,.art-skupine){row-gap:28px;column-gap:20px;}
 
-/* naslovnica */
+/* naslovnica — nizka (2 : 1, lastnik 2026-11-23: »stanjšaj jih in povečaj ime noter«) */
 .v5[data-view="grid"] .lcell:not(.open) .a-row .a-num,
 .v5[data-view="grid"] .lcell:not(.open) .row .row-name,
 .v5[data-view="grid"] :is(#cenikList,.art-skupine) .cgrp:not(.open) .cgrp-nm,
 .v5[data-view="grid"] .fak-grid .fak-card:not(.open) h3,
 .v5[data-view="grid"] .lcell:not(.open) .row.dk-kart .dk-nasl{
   position:relative;display:flex!important;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 8px;
-  width:100%;height:auto!important;aspect-ratio:16 / 10;margin:0!important;padding:14px 18px;border-radius:var(--radius);overflow:hidden;isolation:isolate;
-  font-family:var(--sans);font-size:clamp(14px,6.6cqi,22px)!important;font-weight:500!important;letter-spacing:-.02em;line-height:1.18!important;
+  width:100%;height:auto!important;aspect-ratio:var(--cov-razmerje,2 / 1);margin:0!important;padding:12px 18px;border-radius:var(--radius);overflow:hidden;isolation:isolate;
+  font-family:var(--sans);font-size:clamp(16px,8.6cqi,28px)!important;font-weight:500!important;letter-spacing:-.022em;line-height:1.14!important;
   color:var(--cov-ink)!important;text-align:center;text-wrap:balance;white-space:normal!important;
   background:radial-gradient(var(--r1,72% 95%) at var(--p1,28% 22%),color-mix(in oklab,var(--c1,#8f979e) calc(var(--cov-a1) * var(--j,1)),transparent),transparent 72%),
              radial-gradient(var(--r2,85% 100%) at var(--p2,78% 88%),color-mix(in oklab,var(--c2,#cdd3d8) calc(var(--cov-a2) * var(--j,1)),transparent),transparent 74%),
@@ -2987,7 +2987,7 @@ html.sc-sam{--vrh:max(12px,env(safe-area-inset-top));}
 
 /* spremni list: naslovnica (številka) → stranka › ; datum je naslov dneva nad karticami; potrditev v kotu naslovnice */
 .v5[data-view="grid"] .lcell:not(.open) .a-row{display:grid!important;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;grid-template-areas:"num" "cli" "foot";gap:0;align-content:start;align-items:start;text-align:left;}
-.v5[data-view="grid"] .lcell:not(.open) .a-row .a-num{grid-area:num;font-size:clamp(18px,8.4cqi,30px)!important;font-variant-numeric:tabular-nums;letter-spacing:-.025em;}
+.v5[data-view="grid"] .lcell:not(.open) .a-row .a-num{grid-area:num;font-size:clamp(20px,11cqi,36px)!important;font-variant-numeric:tabular-nums;letter-spacing:-.03em;}
 .v5[data-view="grid"] .lcell:not(.open) .a-row .a-num .a-pop{position:absolute;left:12px;bottom:10px;display:inline-flex;opacity:.85;will-change:transform;}   /* SVG na naslovnici v svojem sloju (Chrome na Androidu) */
 .v5[data-view="grid"] .lcell:not(.open) .a-row .a-cli{grid-area:cli;display:block!important;margin:12px 0 0!important;}
 .v5[data-view="grid"] .lcell:not(.open) .a-row .a-cli .a-izr{display:inline-flex;align-items:center;margin-left:8px;padding:1px 8px;border:1px solid var(--line);border-radius:var(--r-full);
@@ -3051,6 +3051,7 @@ html[data-view] .pz-mreza .row .num::before{content:none;}
 .v5 .pz-mreza .pz-cov-st.notri{color:color-mix(in srgb,var(--cov-ink) 86%,transparent);font-weight:500;}
 .v5 .pz-mreza .pz-cov-ure{flex-basis:100%;margin-top:-2px;font-size:clamp(10px,3.8cqi,13px);font-weight:400;letter-spacing:0;line-height:1.3;color:color-mix(in srgb,var(--cov-ink) 52%,transparent);font-variant-numeric:tabular-nums;}
 .v5[data-view="grid"] .pz-mreza .lcell:not(.open) .row .row-name{gap:4px 8px;align-content:center;}   /* ime, stanje in ure skupaj na sredini */
+@container (max-width:200px){ .v5[data-view="grid"] .pz-mreza .row-name{--cov-razmerje:16 / 10;} }   /* ozka (telefon): tri vrstice z imenom v dveh — višja, da se nič ne odreže */
 .okno .okno-kartica .pz-cov-ure{display:block;font-size:var(--fs-13);color:var(--mid);}
 /* okno zaposlenega (kopija kartice v glavi): stanje kot podnaslov */
 .okno .okno-kartica .pz-cov-st{display:block;margin-top:2px;font-size:var(--fs-13);font-weight:400;color:var(--mid);}
